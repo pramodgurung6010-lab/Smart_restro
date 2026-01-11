@@ -45,7 +45,7 @@ const MenuManagement = ({ menu, onUpdateItem }) => {
       onUpdateItem({ ...editingItem, ...formData });
     } else {
       const newItem = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: `menu-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         ...formData
       };
       onUpdateItem(newItem); 

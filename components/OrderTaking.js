@@ -26,7 +26,7 @@ const OrderTaking = ({ table, menu, onSubmitOrder, onCancel, existingOrder }) =>
         return prev.map(i => i.menuItemId === item.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
       return [...prev, {
-        id: Math.random().toString(36).substr(2, 9),
+        id: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         menuItemId: item.id,
         name: item.name,
         quantity: 1,
@@ -49,10 +49,19 @@ const OrderTaking = ({ table, menu, onSubmitOrder, onCancel, existingOrder }) =>
   const subtotal = cart.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
   const itemsCount = cart.reduce((acc, curr) => acc + curr.quantity, 0);
 
+  const generateOrderNumber = () => {
+    const today = new Date();
+    const year = today.getFullYear().toString().slice(-2);
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    const timestamp = Date.now().toString().slice(-4);
+    return `ORD${year}${month}${day}${timestamp}`;
+  };
+
   const handleSubmit = () => {
     if (cart.length === 0) return;
     const newOrder = {
-      id: existingOrder?.id || Math.random().toString(36).substr(2, 9),
+      id: existingOrder?.id || generateOrderNumber(),
       tableId: table.id,
       items: cart,
       status: existingOrder?.status || OrderStatus.PENDING,

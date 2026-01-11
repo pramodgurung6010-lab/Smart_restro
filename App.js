@@ -22,9 +22,7 @@ const App = () => {
   const [menu, setMenu] = useState(INITIAL_MENU);
   const [tables, setTables] = useState(INITIAL_TABLES);
   const [orders, setOrders] = useState([]);
-  const [users, setUsers] = useState([
-    { id: '1', username: 'admin', role: UserRole.ADMIN, name: 'Main Admin' }
-  ]);
+  const [users, setUsers] = useState([]); // Start with empty array, will be loaded from backend
   const [selectedTable, setSelectedTable] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [notifications, setNotifications] = useState([
@@ -72,7 +70,9 @@ const App = () => {
     };
   }, [orders, tables]);
 
-  const handleLogin = (user) => setCurrentUser(user);
+  const handleLogin = (user) => {
+    setCurrentUser(user);
+  };
   const handleLogout = () => {
     setCurrentUser(null);
     setActiveTab('dashboard');

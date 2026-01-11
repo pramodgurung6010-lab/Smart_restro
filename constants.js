@@ -45,12 +45,52 @@ export const INITIAL_TABLES = [
 export const CATEGORIES = ['All', 'Starters', 'Main', 'Dessert', 'Beverage'];
 
 export const NAVIGATION_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: React.createElement(LayoutDashboard, { size: 20 }), roles: [UserRole.ADMIN] },
-  { id: 'menu', label: 'Menu Management', icon: React.createElement(Utensils, { size: 20 }), roles: [UserRole.ADMIN] },
-  { id: 'tables', label: 'Table Map', icon: React.createElement(TableIcon, { size: 20 }), roles: [UserRole.ADMIN, UserRole.WAITER] },
-  { id: 'orders', label: 'Live Orders', icon: React.createElement(Receipt, { size: 20 }), roles: [UserRole.ADMIN, UserRole.WAITER, UserRole.KITCHEN] },
-  { id: 'billing', label: 'Billing', icon: React.createElement(Receipt, { size: 20 }), roles: [UserRole.ADMIN, UserRole.WAITER] },
-  { id: 'reports', label: 'Analytics', icon: React.createElement(BarChart3, { size: 20 }), roles: [UserRole.ADMIN] },
-  { id: 'users', label: 'Staff Management', icon: React.createElement(Users, { size: 20 }), roles: [UserRole.ADMIN] },
-  { id: 'profile', label: 'My Account', icon: React.createElement(UserCircle, { size: 20 }), roles: [UserRole.ADMIN, UserRole.WAITER, UserRole.KITCHEN] },
+  { 
+    id: 'dashboard', 
+    label: 'Dashboard', 
+    icon: <LayoutDashboard size={20} />, 
+    roles: [UserRole.ADMIN] 
+  },
+  { 
+    id: 'menu', 
+    label: 'Menu Management', 
+    icon: <Utensils size={20} />, 
+    roles: [UserRole.ADMIN] 
+  },
+  { 
+    id: 'tables', 
+    label: 'Table Map', 
+    icon: <TableIcon size={20} />, 
+    roles: [UserRole.ADMIN, UserRole.WAITER] 
+  },
+  { 
+    id: 'orders', 
+    label: 'Live Orders', 
+    icon: <Receipt size={20} />, 
+    roles: [UserRole.ADMIN, UserRole.WAITER, UserRole.KITCHEN] 
+  },
+  { 
+    id: 'billing', 
+    label: 'Billing', 
+    icon: <Receipt size={20} />, 
+    roles: [UserRole.ADMIN, UserRole.WAITER] 
+  },
+  { 
+    id: 'reports', 
+    label: 'Analytics', 
+    icon: <BarChart3 size={20} />, 
+    roles: [UserRole.ADMIN] 
+  },
+  { 
+    id: 'users', 
+    label: 'Staff Management', 
+    icon: <Users size={20} />, 
+    roles: [UserRole.ADMIN] 
+  },
+  { 
+    id: 'profile', 
+    label: 'My Account', 
+    icon: <UserCircle size={20} />, 
+    roles: [UserRole.ADMIN, UserRole.WAITER, UserRole.KITCHEN] 
+  },
 ];

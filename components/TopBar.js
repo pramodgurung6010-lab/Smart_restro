@@ -144,10 +144,10 @@ const TopBar = ({ user, onLogout, onSearch, notifications = [], onClearNotificat
             className="flex items-center gap-3 cursor-pointer group hover:bg-gray-50 px-3 py-1.5 rounded-2xl transition-all select-none"
           >
             <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm shadow-sm ring-2 ring-emerald-50">
-              {user.name.charAt(0)}
+              {(user.name || user.username || 'U').charAt(0).toUpperCase()}
             </div>
             <div className="text-left leading-tight hidden sm:block">
-              <p className="text-[13px] font-bold text-gray-900">{user.name}</p>
+              <p className="text-[13px] font-bold text-gray-900">{user.name || user.username || 'User'}</p>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{user.role}</p>
             </div>
             <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180 text-emerald-600' : 'group-hover:text-gray-600'}`} />
@@ -164,10 +164,10 @@ const TopBar = ({ user, onLogout, onSearch, notifications = [], onClearNotificat
                 <div className="p-6 bg-emerald-50/50 rounded-[22px] mb-2">
                   <div className="flex items-center gap-4 mb-4">
                     <div className="w-14 h-14 rounded-2xl bg-emerald-600 flex items-center justify-center text-white text-xl font-black shadow-lg shadow-emerald-100">
-                      {user.name.charAt(0)}
+                      {(user.name || user.username || 'U').charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-black text-gray-900">{user.name}</p>
+                      <p className="text-sm font-black text-gray-900">{user.name || user.username || 'User'}</p>
                       <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-[0.1em]">{user.role}</p>
                     </div>
                   </div>

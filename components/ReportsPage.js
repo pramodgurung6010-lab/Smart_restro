@@ -62,7 +62,7 @@ const ReportsPage = ({ orders }) => {
 
   const addToHistory = (type) => {
     const newReport = {
-      id: Math.random().toString(36).substr(2, 6).toUpperCase(),
+      id: `RPT${Date.now().toString().slice(-6)}`,
       name: `Sales_${startDate}_to_${endDate}`,
       type,
       date: Date.now(),
