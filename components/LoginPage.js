@@ -31,8 +31,9 @@ const LoginPage = ({ onLogin }) => {
 
       const user = res.data;
 
-      // Store the token in localStorage
+      // Store the token and user data in localStorage
       localStorage.setItem('token', user.token);
+      localStorage.setItem('currentUser', JSON.stringify(user));
       
       // Store user info if remember me is checked
       if (rememberMe) {

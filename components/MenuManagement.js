@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { CATEGORIES } from '../constants';
-import { Plus, Search, Edit3, Trash2, Check, X, DollarSign, Tag, Info, FileText } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, X, DollarSign, Tag, Info, FileText } from 'lucide-react';
 
-const MenuManagement = ({ menu, onUpdateItem }) => {
+const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
+  const [menu, setMenu] = useState(propMenu || []);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [showModal, setShowModal] = useState(false);
@@ -14,6 +16,47 @@ const MenuManagement = ({ menu, onUpdateItem }) => {
     available: true,
     description: ''
   });
+
+  // Get auth token from localStorage
+  const getAuthToken = () => {
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    return user.token;
+  };
+
+  // API configuration
+  const api = axios.create({
+    baseURL: 'http://localhost:5002/api',
+    headers: {
+      'Authorization': `Bearer ${getAuthToken()}`
+    }
+  });
+
+  // Fetch menu items from backend
+  const fetchMenu = async () => {
+    try {
+      const response = await api.get('/menu');
+      const backendMenu = response.data.map(item => ({
+        id: item._id,
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        available: item.isAvailable,
+        description: item.description || ''
+      }));
+      setMenu(backendMenu);
+    } catch (error) {
+      console.error('Error fetching menu:', error);
+      // Fallback to prop menu if backend fails
+      if (propMenu) {
+        setMenu(propMenu);
+      }
+    }
+  };
+
+  // Load menu on component mount
+  useEffect(() => {
+    fetchMenu();
+  }, []);
 
   const filteredMenu = menu.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -33,28 +76,82 @@ const MenuManagement = ({ menu, onUpdateItem }) => {
       name: item.name, 
       category: item.category, 
       price: item.price, 
-      available: item.available,
-      description: item.description || ''
+      available: item.available, 
+      description: item.description || '' 
     });
     setShowModal(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingItem) {
-      onUpdateItem({ ...editingItem, ...formData });
-    } else {
-      const newItem = {
-        id: `menu-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        ...formData
+    if (!formData.name || !formData.category || !formData.price) return;
+
+    try {
+      const backendData = {
+        name: formData.name,
+        category: formData.category,
+        price: formData.price,
+        isAvailable: formData.available,
+        description: formData.description
       };
-      onUpdateItem(newItem); 
+
+      let newItem;
+      if (editingItem) {
+        // Update existing item
+        await api.put(`/menu/${editingItem.id}`, backendData);
+        newItem = { id: editingItem.id, ...formData };
+      } else {
+        // Create new item
+        const response = await api.post('/menu', backendData);
+        newItem = { id: response.data.menuItem._id, ...formData };
+      }
+
+      // Update local state
+      if (editingItem) {
+        setMenu(prev => prev.map(i => i.id === editingItem.id ? newItem : i));
+      } else {
+        setMenu(prev => [...prev, newItem]);
+      }
+
+      // Call parent callback if provided
+      if (onUpdateItem) {
+        onUpdateItem(newItem);
+      }
+
+      setShowModal(false);
+    } catch (error) {
+      console.error('Error saving menu item:', error);
+      alert('Failed to save menu item. Please try again.');
     }
-    setShowModal(false);
   };
 
-  const toggleAvailability = (item) => {
-    onUpdateItem({ ...item, available: !item.available });
+  const handleDelete = async (item) => {
+    if (!window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/menu/${item.id}`);
+      setMenu(prev => prev.filter(i => i.id !== item.id));
+    } catch (error) {
+      console.error('Error deleting menu item:', error);
+      alert('Failed to delete menu item. Please try again.');
+    }
+  };
+
+  const toggleAvailability = async (item) => {
+    try {
+      await api.patch(`/menu/${item.id}/availability`);
+      const updatedItem = { ...item, available: !item.available };
+      setMenu(prev => prev.map(i => i.id === item.id ? updatedItem : i));
+      
+      if (onUpdateItem) {
+        onUpdateItem(updatedItem);
+      }
+    } catch (error) {
+      console.error('Error toggling availability:', error);
+      alert('Failed to update availability. Please try again.');
+    }
   };
 
   return (
@@ -158,7 +255,10 @@ const MenuManagement = ({ menu, onUpdateItem }) => {
                       >
                         <Edit3 size={18} />
                       </button>
-                      <button className="p-2.5 text-red-400 hover:bg-red-50 rounded-xl transition-all">
+                      <button 
+                        onClick={() => handleDelete(item)}
+                        className="p-2.5 text-red-400 hover:bg-red-50 rounded-xl transition-all"
+                      >
                         <Trash2 size={18} />
                       </button>
                     </div>

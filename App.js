@@ -74,6 +74,8 @@ const App = () => {
     setCurrentUser(user);
   };
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('currentUser');
     setCurrentUser(null);
     setActiveTab('dashboard');
   };

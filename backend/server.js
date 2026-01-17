@@ -23,6 +23,7 @@ const User = require('./models/User');
 
 // Import auth routes
 const authRoutes = require('./routes/auth-main');
+const menuRoutes = require('./routes/menu');
 
 // Test route
 app.get('/test', (req, res) => {
@@ -38,6 +39,9 @@ app.post('/test-post', (req, res) => {
 // Use auth routes
 app.use('/api/auth', authRoutes);
 
+// Use menu routes
+app.use('/api/menu', menuRoutes);
+
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGO_URI)
@@ -45,18 +49,18 @@ mongoose
     console.log('Connected to MongoDB');
     
     // Create default admin user if it doesn't exist
-    const adminExists = await User.findOne({ username: 'admin', role: 'ADMIN' });
+    const adminExists = await User.findOne({ username: 'admin100', role: 'ADMIN' });
     
     if (!adminExists) {
       const defaultAdmin = new User({
-        username: 'admin',
+        username: 'admin100',
         email: 'admin@smartrestro.com',
         password: 'admin123',
         role: 'ADMIN'
       });
       
       await defaultAdmin.save();
-      console.log('✅ Default admin user created: admin/admin123');
+      console.log('✅ Default admin user created: admin100/admin123');
     } else {
       console.log('ℹ️  Admin user already exists');
     }
@@ -74,4 +78,8 @@ app.listen(PORT, () => {
   console.log('- POST /api/auth/register');
   console.log('- PUT /api/auth/users/:id');
   console.log('- DELETE /api/auth/users/:id');
+  console.log('- GET /api/menu');
+  console.log('- POST /api/menu');
+  console.log('- PUT /api/menu/:id');
+  console.log('- DELETE /api/menu/:id');
 });
