@@ -11,10 +11,7 @@ const initialMenuItems = [
     price: 299,
     description: 'Classic pizza with fresh mozzarella, tomato sauce, and basil',
     isAvailable: true,
-    preparationTime: 20,
-    ingredients: ['Pizza dough', 'Mozzarella cheese', 'Tomato sauce', 'Fresh basil', 'Olive oil'],
-    allergens: ['Gluten', 'Dairy'],
-    dietaryInfo: ['Vegetarian']
+    preparationTime: 20
   },
   {
     name: 'Caesar Salad',
@@ -22,10 +19,7 @@ const initialMenuItems = [
     price: 199,
     description: 'Crisp romaine lettuce with parmesan cheese, croutons, and caesar dressing',
     isAvailable: true,
-    preparationTime: 10,
-    ingredients: ['Romaine lettuce', 'Parmesan cheese', 'Croutons', 'Caesar dressing'],
-    allergens: ['Dairy', 'Eggs'],
-    dietaryInfo: ['Vegetarian']
+    preparationTime: 10
   },
   {
     name: 'Grilled Salmon',
@@ -33,10 +27,7 @@ const initialMenuItems = [
     price: 599,
     description: 'Fresh Atlantic salmon grilled to perfection with herbs and lemon',
     isAvailable: true,
-    preparationTime: 25,
-    ingredients: ['Atlantic salmon', 'Herbs', 'Lemon', 'Olive oil', 'Garlic'],
-    allergens: ['Fish'],
-    dietaryInfo: ['Gluten-Free']
+    preparationTime: 25
   },
   {
     name: 'Tiramisu',
@@ -44,10 +35,7 @@ const initialMenuItems = [
     price: 149,
     description: 'Classic Italian dessert with coffee-soaked ladyfingers and mascarpone',
     isAvailable: true,
-    preparationTime: 5,
-    ingredients: ['Ladyfingers', 'Mascarpone', 'Coffee', 'Cocoa powder', 'Sugar'],
-    allergens: ['Gluten', 'Dairy', 'Eggs'],
-    dietaryInfo: ['Vegetarian']
+    preparationTime: 5
   },
   {
     name: 'Iced Tea',
@@ -55,10 +43,7 @@ const initialMenuItems = [
     price: 79,
     description: 'Refreshing iced tea with lemon and mint',
     isAvailable: true,
-    preparationTime: 3,
-    ingredients: ['Black tea', 'Ice', 'Lemon', 'Mint', 'Sugar'],
-    allergens: [],
-    dietaryInfo: ['Vegan', 'Gluten-Free']
+    preparationTime: 3
   },
   {
     name: 'Pasta Carbonara',
@@ -66,10 +51,7 @@ const initialMenuItems = [
     price: 349,
     description: 'Creamy pasta with bacon, eggs, and parmesan cheese',
     isAvailable: true,
-    preparationTime: 18,
-    ingredients: ['Pasta', 'Bacon', 'Eggs', 'Parmesan cheese', 'Black pepper'],
-    allergens: ['Gluten', 'Dairy', 'Eggs'],
-    dietaryInfo: []
+    preparationTime: 18
   },
   {
     name: 'Garlic Bread',
@@ -77,10 +59,7 @@ const initialMenuItems = [
     price: 99,
     description: 'Toasted bread with garlic butter and herbs',
     isAvailable: true,
-    preparationTime: 8,
-    ingredients: ['Bread', 'Garlic', 'Butter', 'Parsley'],
-    allergens: ['Gluten', 'Dairy'],
-    dietaryInfo: ['Vegetarian']
+    preparationTime: 8
   }
 ];
 

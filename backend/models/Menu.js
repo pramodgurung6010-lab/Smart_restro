@@ -32,24 +32,6 @@ const menuSchema = new mongoose.Schema({
     type: Number,
     default: 15,
     min: 1
-  },
-  ingredients: [{
-    type: String,
-    trim: true
-  }],
-  allergens: [{
-    type: String,
-    trim: true
-  }],
-  dietaryInfo: [{
-    type: String,
-    enum: ['Vegetarian', 'Vegan', 'Gluten-Free', 'Dairy-Free', 'Spicy', 'Halal']
-  }],
-  nutritionalInfo: {
-    calories: { type: Number, min: 0 },
-    protein: { type: Number, min: 0 },
-    carbs: { type: Number, min: 0 },
-    fat: { type: Number, min: 0 }
   }
 }, {
   timestamps: true
