@@ -1,11 +1,63 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { OrderStatus } from '../types';
 import { CATEGORIES } from '../constants';
-import { ChevronLeft, Plus, Minus, Send, Trash2, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, Send, Trash2, ShoppingCart, Loader } from 'lucide-react';
 
-const OrderTaking = ({ table, menu, onSubmitOrder, onCancel, existingOrder }) => {
+const OrderTaking = ({ table, onSubmitOrder, onCancel, existingOrder }) => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [cart, setCart] = useState([]);
+  const [menu, setMenu] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+
+  // Get auth token from localStorage
+  const getAuthToken = () => {
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    return user.token;
+  };
+
+  // API configuration
+  const api = axios.create({
+    baseURL: 'http://localhost:5002/api',
+    headers: {
+      'Authorization': `Bearer ${getAuthToken()}`
+    }
+  });
+
+  // Fetch menu items from backend
+  const fetchMenu = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/menu');
+      const backendMenu = response.data.map(item => ({
+        id: item._id,
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        available: item.isAvailable,
+        description: item.description || ''
+      }));
+      setMenu(backendMenu);
+    } catch (error) {
+      console.error('Error fetching menu:', error);
+      showMessage('error', 'Failed to load menu items');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show message helper
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+  };
+
+  // Load menu and existing order on component mount
+  useEffect(() => {
+    fetchMenu();
+  }, []);
 
   useEffect(() => {
     if (existingOrder) {
@@ -58,22 +110,62 @@ const OrderTaking = ({ table, menu, onSubmitOrder, onCancel, existingOrder }) =>
     return `ORD${year}${month}${day}${timestamp}`;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (cart.length === 0) return;
-    const newOrder = {
-      id: existingOrder?.id || generateOrderNumber(),
-      tableId: table.id,
-      items: cart,
-      status: existingOrder?.status || OrderStatus.PENDING,
-      total: subtotal,
-      createdAt: existingOrder?.createdAt || Date.now(),
-      waiterId: existingOrder?.waiterId || 'waiter-1'
-    };
-    onSubmitOrder(newOrder);
+    
+    try {
+      setSubmitting(true);
+      
+      // Prepare order data for backend
+      const orderData = {
+        tableId: table.id,
+        tableNumber: table.number,
+        items: cart.map(item => ({
+          menuItemId: item.menuItemId,
+          quantity: item.quantity,
+          specialInstructions: item.specialInstructions || ''
+        }))
+      };
+
+      if (existingOrder) {
+        // Update existing order
+        const response = await api.put(`/orders/${existingOrder.id}`, {
+          items: orderData.items
+        });
+        showMessage('success', 'Order updated successfully!');
+        onSubmitOrder(response.data.order);
+      } else {
+        // Create new order
+        const response = await api.post('/orders', orderData);
+        showMessage('success', 'Order submitted to kitchen!');
+        onSubmitOrder(response.data.order);
+      }
+      
+      // Clear cart after successful submission
+      setCart([]);
+      
+    } catch (error) {
+      console.error('Error submitting order:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to submit order';
+      showMessage('error', errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="h-full flex flex-col gap-6 animate-in slide-in-from-right duration-300 pb-4">
+      {/* Message Display */}
+      {message.text && (
+        <div className={`p-4 rounded-2xl flex items-center gap-3 ${
+          message.type === 'success' 
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+            : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {message.text}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <button 
           onClick={onCancel}
@@ -89,9 +181,17 @@ const OrderTaking = ({ table, menu, onSubmitOrder, onCancel, existingOrder }) =>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-8 overflow-hidden">
-        {/* Menu Grid */}
-        <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <Loader className="animate-spin text-emerald-600" size={24} />
+            <span className="text-gray-600">Loading menu...</span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col lg:flex-row gap-8 overflow-hidden">
+          {/* Menu Grid */}
+          <div className="flex-1 flex flex-col gap-4 overflow-hidden">
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
             {CATEGORIES.map(cat => (
               <button
@@ -176,20 +276,30 @@ const OrderTaking = ({ table, menu, onSubmitOrder, onCancel, existingOrder }) =>
             </div>
             
             <button 
-              disabled={cart.length === 0}
+              disabled={cart.length === 0 || submitting}
               onClick={handleSubmit}
               className={`w-full py-5 rounded-[24px] font-black text-sm flex items-center justify-center gap-3 transition-all ${
-                cart.length > 0 
+                cart.length > 0 && !submitting
                   ? 'bg-emerald-500 text-[#022c22] hover:bg-emerald-400 shadow-xl shadow-emerald-950/20 active:scale-[0.98]' 
                   : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/10'
               }`}
             >
-              <Send size={18} />
-              {existingOrder ? 'UPDATE KITCHEN' : 'SUBMIT TO KITCHEN'}
+              {submitting ? (
+                <>
+                  <Loader className="animate-spin" size={18} />
+                  SUBMITTING...
+                </>
+              ) : (
+                <>
+                  <Send size={18} />
+                  {existingOrder ? 'UPDATE KITCHEN' : 'SUBMIT TO KITCHEN'}
+                </>
+              )}
             </button>
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

@@ -24,6 +24,7 @@ const User = require('./models/User');
 // Import auth routes
 const authRoutes = require('./routes/auth-main');
 const menuRoutes = require('./routes/menu');
+const orderRoutes = require('./routes/orders');
 
 // Test route
 app.get('/test', (req, res) => {
@@ -41,6 +42,9 @@ app.use('/api/auth', authRoutes);
 
 // Use menu routes
 app.use('/api/menu', menuRoutes);
+
+// Use order routes
+app.use('/api/orders', orderRoutes);
 
 // Connect to MongoDB
 mongoose
@@ -82,4 +86,8 @@ app.listen(PORT, () => {
   console.log('- POST /api/menu');
   console.log('- PUT /api/menu/:id');
   console.log('- DELETE /api/menu/:id');
+  console.log('- GET /api/orders');
+  console.log('- POST /api/orders');
+  console.log('- PUT /api/orders/:id');
+  console.log('- DELETE /api/orders/:id');
 });

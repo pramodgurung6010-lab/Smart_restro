@@ -23,12 +23,16 @@ const LoginPage = ({ onLogin }) => {
     }
 
     try {
+      console.log('🔄 Attempting login with:', { username, password, role });
+      console.log('🌐 API URL:', 'http://localhost:5002/api/auth/login');
+      
       const res = await axios.post('http://localhost:5002/api/auth/login', {
         username,
         password,
         role
       });
 
+      console.log('✅ Login response:', res.data);
       const user = res.data;
 
       // Store the token and user data in localStorage
@@ -47,6 +51,10 @@ const LoginPage = ({ onLogin }) => {
       onLogin(user);
 
     } catch (err) {
+      console.error('❌ Login error:', err);
+      console.error('❌ Error response:', err.response?.data);
+      console.error('❌ Error status:', err.response?.status);
+      
       if (err.response?.status === 400) {
         setError(err.response.data.message || 'Invalid credentials');
       } else if (err.response?.status === 500) {

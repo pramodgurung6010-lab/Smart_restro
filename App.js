@@ -271,17 +271,31 @@ const App = () => {
   }, [orders, tables]);
 
   const addOrder = (order) => {
+    // Convert backend order format to frontend format if needed
+    const frontendOrder = {
+      id: order._id || order.id,
+      orderId: order.orderId,
+      tableId: order.tableId,
+      items: order.items,
+      status: order.status,
+      total: order.total,
+      createdAt: order.createdAt || Date.now(),
+      waiterId: order.waiter || order.waiterId,
+      customerName: order.customerName,
+      isPaid: order.isPaid || false
+    };
+
     setOrders(prev => {
-      const existingIndex = prev.findIndex(o => o.id === order.id);
+      const existingIndex = prev.findIndex(o => o.id === frontendOrder.id);
       if (existingIndex > -1) {
-        return prev.map(o => o.id === order.id ? order : o);
+        return prev.map(o => o.id === frontendOrder.id ? frontendOrder : o);
       }
-      return [...prev, order];
+      return [...prev, frontendOrder];
     });
     
     setTables(prev => prev.map(t => {
-      if (t.id === order.tableId) {
-        return { ...t, status: TableStatus.OCCUPIED, currentOrderId: order.id };
+      if (t.id === frontendOrder.tableId) {
+        return { ...t, status: TableStatus.OCCUPIED, currentOrderId: frontendOrder.id };
       }
       return t;
     }));
@@ -550,7 +564,7 @@ const App = () => {
           return null;
         }
         const existingOrder = selectedTable.currentOrderId ? orders.find(o => o.id === selectedTable.currentOrderId) : undefined;
-        return <OrderTaking table={selectedTable} menu={filteredData.menu} onSubmitOrder={addOrder} onCancel={() => { setSelectedTable(null); setActiveTab('tables'); }} existingOrder={existingOrder} />;
+        return <OrderTaking table={selectedTable} onSubmitOrder={addOrder} onCancel={() => { setSelectedTable(null); setActiveTab('tables'); }} existingOrder={existingOrder} />;
       case 'orders': 
         return (
           <KitchenDisplay 
