@@ -532,7 +532,7 @@ const App = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <AdminDashboard stats={stats} orders={filteredData.orders} />;
+      case 'dashboard': return <AdminDashboard />;
       case 'menu': return (
         <MenuManagement 
           menu={filteredData.menu} 
@@ -568,9 +568,6 @@ const App = () => {
       case 'orders': 
         return (
           <KitchenDisplay 
-            orders={filteredData.orders} 
-            onUpdateItemStatus={handleUpdateItemStatus}
-            onUpdateOrderStatus={handleUpdateOrderStatus}
             role={currentUser.role} 
           />
         );

@@ -23,6 +23,11 @@ const orderItemSchema = new mongoose.Schema({
   specialInstructions: {
     type: String,
     trim: true
+  },
+  status: {
+    type: String,
+    enum: ['PENDING', 'PREPARING', 'READY'],
+    default: 'PENDING'
   }
 });
 

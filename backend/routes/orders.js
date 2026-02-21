@@ -37,6 +37,62 @@ const requireStaff = (req, res, next) => {
   next();
 };
 
+// POST /orders/update-item-status - Update individual item status
+// Using POST instead of PATCH for better compatibility
+router.post('/update-item-status', authenticateToken, requireStaff, async (req, res) => {
+  try {
+    const { orderId, itemId, status } = req.body;
+    console.log('🔧 Item status update request:', { orderId, itemId, status });
+
+    const validStatuses = ['PENDING', 'PREPARING', 'READY'];
+    if (!validStatuses.includes(status)) {
+      console.log('❌ Invalid status:', status);
+      return res.status(400).json({ message: 'Invalid item status' });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      console.log('❌ Order not found:', orderId);
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Find and update the specific item
+    const item = order.items.id(itemId);
+    if (!item) {
+      console.log('❌ Item not found:', itemId);
+      return res.status(404).json({ message: 'Item not found in order' });
+    }
+
+    console.log('✅ Updating item status from', item.status, 'to', status);
+    item.status = status;
+    
+    // Update overall order status based on items
+    const allItemStatuses = order.items.map(i => i.status);
+    if (allItemStatuses.every(s => s === 'READY')) {
+      order.status = 'READY';
+    } else if (allItemStatuses.some(s => s === 'PREPARING' || s === 'READY')) {
+      order.status = 'PREPARING';
+    } else {
+      order.status = 'PENDING';
+    }
+
+    await order.save();
+    console.log('✅ Item status updated successfully');
+
+    const updatedOrder = await Order.findById(orderId)
+      .populate('waiter', 'name username')
+      .populate('items.menuItem', 'name category');
+
+    res.status(200).json({
+      message: `Item status updated to ${status}`,
+      order: updatedOrder
+    });
+  } catch (error) {
+    console.error('Update item status error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // GET /orders - Get all orders with filtering
 router.get('/', authenticateToken, requireStaff, async (req, res) => {
   try {
@@ -87,11 +143,35 @@ router.get('/', authenticateToken, requireStaff, async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
     const orders = await Order.find(query)
-      .populate('waiter', 'name username')
-      .populate('items.menuItem', 'name category')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
-      .skip(skip);
+      .skip(skip)
+      .lean()
+      .exec();
+    
+    // Manually populate waiter and menuItem to preserve all fields
+    const Menu = require('../models/Menu');
+    const User = require('../models/User');
+    
+    for (let order of orders) {
+      // Populate waiter
+      if (order.waiter) {
+        const waiter = await User.findById(order.waiter).select('name username').lean();
+        order.waiter = waiter;
+      }
+      
+      // Populate menuItem for each item and ensure status exists
+      for (let item of order.items) {
+        if (item.menuItem) {
+          const menuItem = await Menu.findById(item.menuItem).select('name category').lean();
+          item.menuItem = menuItem;
+        }
+        // Ensure status field exists (for old orders that might not have it)
+        if (!item.status) {
+          item.status = 'PENDING';
+        }
+      }
+    }
 
     const totalOrders = await Order.countDocuments(query);
 
@@ -115,11 +195,30 @@ router.get('/', authenticateToken, requireStaff, async (req, res) => {
 router.get('/:id', authenticateToken, requireStaff, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate('waiter', 'name username')
-      .populate('items.menuItem', 'name category price');
+      .lean()
+      .exec();
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Manually populate waiter and menuItem to preserve all fields
+    const Menu = require('../models/Menu');
+    const User = require('../models/User');
+    
+    if (order.waiter) {
+      const waiter = await User.findById(order.waiter).select('name username').lean();
+      order.waiter = waiter;
+    }
+    
+    for (let item of order.items) {
+      if (item.menuItem) {
+        const menuItem = await Menu.findById(item.menuItem).select('name category price').lean();
+        item.menuItem = menuItem;
+      }
+      if (!item.status) {
+        item.status = 'PENDING';
+      }
     }
 
     res.status(200).json(order);
@@ -166,7 +265,8 @@ router.post('/', authenticateToken, requireStaff, async (req, res) => {
         name: menuItem.name,
         price: menuItem.price,
         quantity: item.quantity,
-        specialInstructions: item.specialInstructions || ''
+        specialInstructions: item.specialInstructions || '',
+        status: 'PENDING'
       });
     }
 
@@ -258,43 +358,77 @@ router.put('/:id', authenticateToken, requireStaff, async (req, res) => {
   }
 });
 
-// PATCH /orders/:id/status - Update order status
+// PATCH /orders/:id/status - Update order or item status
 router.patch('/:id/status', authenticateToken, requireStaff, async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
-
-    const validStatuses = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'SERVED', 'CANCELLED'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' });
-    }
+    const { status, itemId } = req.body;
+    
+    console.log('🔧 Status update request:', { orderId: id, itemId, status });
 
     const order = await Order.findById(id);
     if (!order) {
+      console.log('❌ Order not found:', id);
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Record actual prep time when order is ready
-    if (status === 'READY' && order.status === 'PREPARING') {
-      const prepStartTime = order.updatedAt || order.createdAt;
-      const prepTime = Math.round((new Date() - prepStartTime) / (1000 * 60)); // in minutes
-      order.actualPrepTime = prepTime;
+    // If itemId is provided, update individual item status
+    if (itemId) {
+      const validItemStatuses = ['PENDING', 'PREPARING', 'READY'];
+      if (!validItemStatuses.includes(status)) {
+        console.log('❌ Invalid item status:', status);
+        return res.status(400).json({ message: 'Invalid item status' });
+      }
+
+      const item = order.items.id(itemId);
+      if (!item) {
+        console.log('❌ Item not found:', itemId);
+        return res.status(404).json({ message: 'Item not found in order' });
+      }
+
+      console.log('✅ Updating item status from', item.status, 'to', status);
+      item.status = status;
+      
+      // Update overall order status based on all items
+      const allItemStatuses = order.items.map(i => i.status);
+      if (allItemStatuses.every(s => s === 'READY')) {
+        order.status = 'READY';
+      } else if (allItemStatuses.some(s => s === 'PREPARING' || s === 'READY')) {
+        order.status = 'PREPARING';
+      } else {
+        order.status = 'PENDING';
+      }
+    } else {
+      // Update order-level status
+      const validStatuses = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'SERVED', 'CANCELLED'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: 'Invalid status' });
+      }
+
+      // Record actual prep time when order is ready
+      if (status === 'READY' && order.status === 'PREPARING') {
+        const prepStartTime = order.updatedAt || order.createdAt;
+        const prepTime = Math.round((new Date() - prepStartTime) / (1000 * 60)); // in minutes
+        order.actualPrepTime = prepTime;
+      }
+
+      order.status = status;
     }
 
-    order.status = status;
     await order.save();
+    console.log('✅ Status updated successfully');
 
     const updatedOrder = await Order.findById(id)
       .populate('waiter', 'name username')
       .populate('items.menuItem', 'name category');
 
     res.status(200).json({
-      message: `Order status updated to ${status}`,
+      message: `Status updated to ${status}`,
       order: updatedOrder
     });
   } catch (error) {
-    console.error('Update order status error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Update status error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

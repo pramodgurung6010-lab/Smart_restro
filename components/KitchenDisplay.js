@@ -1,9 +1,107 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { OrderStatus, UserRole } from '../types';
-import { ChefHat, CheckCircle2, Clock, Eye, ShoppingBasket, Play, CheckCircle } from 'lucide-react';
+import { ChefHat, CheckCircle2, Clock, Eye, ShoppingBasket, Play, CheckCircle, Loader } from 'lucide-react';
 
-const KitchenDisplay = ({ orders, onUpdateItemStatus, onUpdateOrderStatus, role }) => {
-  const activeOrders = orders.filter(o => o.status !== OrderStatus.SERVED && o.status !== OrderStatus.CANCELLED);
+const KitchenDisplay = ({ role }) => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState({ type: '', text: '' });
+
+  // Get auth token
+  const getAuthToken = () => {
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    return user.token;
+  };
+
+  // API configuration
+  const api = axios.create({
+    baseURL: 'http://localhost:5002/api',
+    headers: {
+      'Authorization': `Bearer ${getAuthToken()}`
+    }
+  });
+
+  // Fetch orders from backend
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/orders');
+      console.log('📦 Fetched orders:', response.data.orders);
+      const backendOrders = response.data.orders.map(order => ({
+        id: order._id,
+        orderId: order.orderId,
+        tableId: order.tableId,
+        tableNumber: order.tableNumber,
+        items: order.items.map(item => {
+          console.log('📋 Item:', item.name, 'Status:', item.status);
+          return {
+            id: item._id,
+            menuItemId: item.menuItem,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            status: item.status || 'PENDING', // Use item-level status
+            notes: item.specialInstructions || ''
+          };
+        }),
+        status: order.status,
+        total: order.total,
+        createdAt: new Date(order.createdAt).getTime()
+      }));
+      setOrders(backendOrders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      showMessage('error', 'Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show message helper
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+  };
+
+  // Update order status
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await api.patch(`/orders/${orderId}/status`, { status: newStatus });
+      showMessage('success', `Order status updated to ${newStatus}`);
+      fetchOrders();
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      showMessage('error', 'Failed to update order status');
+    }
+  };
+
+  // Update item status (individual item)
+  const handleUpdateItemStatus = async (orderId, itemId, newStatus) => {
+    try {
+      console.log('🔧 Updating item status:', { orderId, itemId, newStatus });
+      const response = await api.patch(`/orders/${orderId}/status`, { 
+        status: newStatus,
+        itemId: itemId
+      });
+      console.log('✅ Item status update response:', response.data);
+      showMessage('success', `Item status updated to ${newStatus}`);
+      fetchOrders();
+    } catch (error) {
+      console.error('❌ Error updating item status:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      showMessage('error', error.response?.data?.message || 'Failed to update item status');
+    }
+  };
+
+  // Fetch orders on mount and set up polling
+  useEffect(() => {
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 5000); // Refresh every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  const activeOrders = orders.filter(o => o.status !== 'SERVED' && o.status !== 'CANCELLED');
   
   // Waiters are restricted from performing status updates
   const isReadOnly = role === UserRole.WAITER;
@@ -12,10 +110,12 @@ const KitchenDisplay = ({ orders, onUpdateItemStatus, onUpdateOrderStatus, role 
     if (isReadOnly) return null;
 
     switch (item.status) {
-      case OrderStatus.PENDING: 
-        return { label: 'Start', next: OrderStatus.PREPARING, color: 'bg-orange-600 hover:bg-orange-700', icon: <Play size={14} /> };
-      case OrderStatus.PREPARING: 
-        return { label: 'Ready', next: OrderStatus.READY, color: 'bg-blue-600 hover:bg-blue-700', icon: <CheckCircle size={14} /> };
+      case 'PENDING': 
+        return { label: 'START', next: 'PREPARING', color: 'bg-orange-600 hover:bg-orange-700', icon: <Play size={14} /> };
+      case 'PREPARING': 
+        return { label: 'PREPARING', next: 'READY', color: 'bg-blue-600 hover:bg-blue-700', icon: <Clock size={14} /> };
+      case 'READY':
+        return { label: 'READY', next: null, color: 'bg-emerald-600', icon: <CheckCircle size={14} /> };
       default: 
         return null;
     }
@@ -32,6 +132,17 @@ const KitchenDisplay = ({ orders, onUpdateItemStatus, onUpdateOrderStatus, role 
 
   return (
     <div className="space-y-6">
+      {/* Message Display */}
+      {message.text && (
+        <div className={`p-4 rounded-2xl flex items-center gap-3 ${
+          message.type === 'success' 
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+            : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {message.text}
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Live Order Monitor</h1>
@@ -55,32 +166,40 @@ const KitchenDisplay = ({ orders, onUpdateItemStatus, onUpdateOrderStatus, role 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+      {loading ? (
+        <div className="flex items-center justify-center py-32">
+          <div className="flex items-center gap-3">
+            <Loader className="animate-spin text-emerald-600" size={32} />
+            <span className="text-gray-600 font-bold">Loading orders...</span>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
         {activeOrders.length > 0 ? activeOrders.map((order) => {
           const isLate = (Date.now() - order.createdAt) > 15 * 60000;
           const totalItemsCount = getTotalItemsCount(order);
-          const isAllReady = order.items.every(item => item.status === OrderStatus.READY);
+          const isAllReady = order.items.every(item => item.status === 'READY');
 
           return (
             <div 
               key={order.id} 
               className={`bg-white rounded-2xl border-t-8 shadow-lg overflow-hidden flex flex-col transition-all hover:shadow-xl ${
-                order.status === OrderStatus.PENDING ? 'border-orange-500' :
-                order.status === OrderStatus.PREPARING ? 'border-blue-500' :
+                order.status === 'PENDING' ? 'border-orange-500' :
+                order.status === 'PREPARING' ? 'border-blue-500' :
                 'border-emerald-500'
               }`}
             >
               <div className="p-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-black text-gray-900 whitespace-nowrap">Table {order.tableId.slice(-2)}</h3>
+                    <h3 className="text-xl font-black text-gray-900 whitespace-nowrap">Table {order.tableNumber}</h3>
                     <div className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-0.5 rounded-lg text-[10px] font-black shadow-sm">
                       <ShoppingBasket size={12} />
                       {totalItemsCount} Items
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">#ORD-{order.id.slice(-4).toUpperCase()}</span>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">#{order.orderId}</span>
                     {isReadOnly && (
                       <span className="flex items-center gap-1 text-[8px] font-black bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded uppercase">
                         <Eye size={10} /> View Only
@@ -113,7 +232,7 @@ const KitchenDisplay = ({ orders, onUpdateItemStatus, onUpdateOrderStatus, role 
                           {/* Item Status Controls */}
                           {!isReadOnly && action ? (
                             <button 
-                              onClick={() => onUpdateItemStatus(order.id, item.id, action.next)}
+                              onClick={() => handleUpdateItemStatus(order.id, item.id, action.next)}
                               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black text-white shadow-sm transition-all active:scale-95 ${action.color}`}
                             >
                               {action.icon}
@@ -121,8 +240,8 @@ const KitchenDisplay = ({ orders, onUpdateItemStatus, onUpdateOrderStatus, role 
                             </button>
                           ) : (
                             <span className={`text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-tighter shadow-sm ${
-                              item.status === OrderStatus.PENDING ? 'bg-orange-100 text-orange-700' :
-                              item.status === OrderStatus.PREPARING ? 'bg-blue-100 text-blue-700' :
+                              item.status === 'PENDING' ? 'bg-orange-100 text-orange-700' :
+                              item.status === 'PREPARING' ? 'bg-blue-100 text-blue-700' :
                               'bg-emerald-100 text-emerald-700'
                             }`}>
                               {item.status}
@@ -148,8 +267,8 @@ const KitchenDisplay = ({ orders, onUpdateItemStatus, onUpdateOrderStatus, role 
                   <div className="flex flex-col">
                     <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Order Progress</span>
                     <span className={`text-[11px] font-black uppercase tracking-tighter ${
-                      order.status === OrderStatus.PENDING ? 'text-orange-600' :
-                      order.status === OrderStatus.PREPARING ? 'text-blue-600' :
+                      order.status === 'PENDING' ? 'text-orange-600' :
+                      order.status === 'PREPARING' ? 'text-blue-600' :
                       'text-emerald-600'
                     }`}>
                       {order.status}
@@ -158,7 +277,7 @@ const KitchenDisplay = ({ orders, onUpdateItemStatus, onUpdateOrderStatus, role 
                   
                   {!isReadOnly && isAllReady && (
                     <button 
-                      onClick={() => onUpdateOrderStatus(order.id, OrderStatus.SERVED)}
+                      onClick={() => handleUpdateOrderStatus(order.id, 'SERVED')}
                       className="px-4 py-2 bg-emerald-600 text-white text-[11px] font-black rounded-xl hover:bg-emerald-700 shadow-md transition-all active:scale-95 flex items-center gap-2"
                     >
                       <ChefHat size={14} />
@@ -178,7 +297,8 @@ const KitchenDisplay = ({ orders, onUpdateItemStatus, onUpdateOrderStatus, role 
             <p className="text-sm font-medium mt-2">All guests have been served. Great job!</p>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
