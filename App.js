@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole, OrderStatus, TableStatus } from './types';
-import { INITIAL_MENU, INITIAL_TABLES } from './constants';
+import { INITIAL_MENU, INITIAL_TABLES, NAVIGATION_ITEMS } from './constants';
 import LoginPage from './components/LoginPage';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -15,8 +15,48 @@ import UserManagement from './components/UserManagement';
 import ProfileSettings from './components/ProfileSettings';
 
 const App = () => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // Check for stored user immediately to avoid loading flash
+  const storedUser = localStorage.getItem('currentUser');
+  const storedTab = localStorage.getItem('activeTab');
+  
+  const [currentUser, setCurrentUser] = useState(() => {
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('currentUser');
+        return null;
+      }
+    }
+    return null;
+  });
+  
+  const [activeTab, setActiveTab] = useState(() => {
+    if (storedUser && storedTab) {
+      try {
+        const user = JSON.parse(storedUser);
+        const navItem = NAVIGATION_ITEMS.find(item => item.id === storedTab);
+        if (navItem && navItem.roles.includes(user.role)) {
+          return storedTab;
+        }
+      } catch (error) {
+        // Fall through to default
+      }
+    }
+    // Set default based on role
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        if (user.role === UserRole.KITCHEN) return 'orders';
+        if (user.role === UserRole.WAITER) return 'tables';
+        return 'dashboard';
+      } catch (error) {
+        return 'dashboard';
+      }
+    }
+    return 'dashboard';
+  });
   
   // App States
   const [menu, setMenu] = useState(INITIAL_MENU);
@@ -49,12 +89,28 @@ const App = () => {
     }
   ]);
 
+  // Clean up invalid stored data on mount (no loading state needed)
+  useEffect(() => {
+    if (storedUser) {
+      try {
+        JSON.parse(storedUser); // Just validate it's parseable
+      } catch (error) {
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('activeTab');
+        setCurrentUser(null);
+      }
+    }
+  }, []);
+
+  // Save active tab to localStorage whenever it changes
+  useEffect(() => {
+    if (currentUser && activeTab) {
+      localStorage.setItem('activeTab', activeTab);
+    }
+  }, [activeTab, currentUser]);
+
   useEffect(() => {
     if (currentUser) {
-      if (currentUser.role === UserRole.KITCHEN) setActiveTab('orders');
-      else if (currentUser.role === UserRole.WAITER) setActiveTab('tables');
-      else setActiveTab('dashboard');
-      
       // Fetch existing orders from backend and update table statuses
       const fetchOrders = async () => {
         try {
@@ -128,10 +184,25 @@ const App = () => {
 
   const handleLogin = (user) => {
     setCurrentUser(user);
+    // Save user to localStorage for session persistence
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    
+    // Set the correct initial tab based on user role
+    if (user.role === UserRole.KITCHEN) {
+      setActiveTab('orders');
+      localStorage.setItem('activeTab', 'orders');
+    } else if (user.role === UserRole.WAITER) {
+      setActiveTab('tables');
+      localStorage.setItem('activeTab', 'tables');
+    } else {
+      setActiveTab('dashboard');
+      localStorage.setItem('activeTab', 'dashboard');
+    }
   };
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('activeTab');
     setCurrentUser(null);
     setActiveTab('dashboard');
   };
