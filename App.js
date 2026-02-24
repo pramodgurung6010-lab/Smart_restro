@@ -54,6 +54,62 @@ const App = () => {
       if (currentUser.role === UserRole.KITCHEN) setActiveTab('orders');
       else if (currentUser.role === UserRole.WAITER) setActiveTab('tables');
       else setActiveTab('dashboard');
+      
+      // Fetch existing orders from backend and update table statuses
+      const fetchOrders = async () => {
+        try {
+          const token = currentUser.token || localStorage.getItem('token');
+          const response = await fetch('http://localhost:5002/api/orders', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            const backendOrders = data.orders || [];
+            
+            // Convert backend orders to frontend format
+            const frontendOrders = backendOrders
+              .filter(order => order.status !== 'SERVED' && order.status !== 'CANCELLED')
+              .map(order => ({
+                id: order._id,
+                orderId: order.orderId,
+                tableId: order.tableId,
+                items: order.items.map(item => ({
+                  id: item._id,
+                  menuItemId: item.menuItem?._id || item.menuItem,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                  status: item.status || 'PENDING',
+                  notes: item.specialInstructions || ''
+                })),
+                status: order.status,
+                total: order.total,
+                createdAt: new Date(order.createdAt).getTime(),
+                waiterId: order.waiter?._id || order.waiter,
+                isPaid: order.isPaid || false
+              }));
+            
+            setOrders(frontendOrders);
+            
+            // Update table statuses based on active orders
+            setTables(prev => prev.map(table => {
+              const hasActiveOrder = frontendOrders.some(order => order.tableId === table.id);
+              if (hasActiveOrder) {
+                const order = frontendOrders.find(o => o.tableId === table.id);
+                return { ...table, status: TableStatus.OCCUPIED, currentOrderId: order.id };
+              }
+              return table;
+            }));
+          }
+        } catch (error) {
+          console.error('Error fetching orders:', error);
+        }
+      };
+      
+      fetchOrders();
     }
   }, [currentUser]);
 
