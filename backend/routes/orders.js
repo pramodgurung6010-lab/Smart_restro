@@ -584,4 +584,252 @@ router.get('/stats/summary', authenticateToken, requireStaff, async (req, res) =
   }
 });
 
+// ============= BILLING ENDPOINTS =============
+
+// POST /orders/:id/bill/generate - Generate bill for an order
+router.post('/:id/bill/generate', authenticateToken, requireStaff, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await Order.findById(id)
+      .populate('waiter', 'name username')
+      .populate('items.menuItem', 'name category price');
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check if order is ready for billing
+    if (order.status === 'CANCELLED') {
+      return res.status(400).json({ message: 'Cannot generate bill for cancelled order' });
+    }
+
+    // Generate bill details
+    const billDetails = {
+      orderId: order.orderId,
+      orderDate: order.createdAt,
+      tableNumber: order.tableNumber,
+      waiterName: order.waiterName || order.waiter?.name,
+      items: order.items.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        amount: item.price * item.quantity
+      })),
+      subtotal: order.subtotal,
+      tax: order.tax,
+      discount: order.discount || 0,
+      total: order.total,
+      paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod,
+      isPaid: order.isPaid
+    };
+
+    res.status(200).json({
+      message: 'Bill generated successfully',
+      bill: billDetails
+    });
+  } catch (error) {
+    console.error('Generate bill error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /orders/:id/bill/pay - Process payment for an order
+router.post('/:id/bill/pay', authenticateToken, requireStaff, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { paymentMethod, amountPaid, discount } = req.body;
+
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Validate payment method
+    const validPaymentMethods = ['CASH', 'CARD', 'UPI', 'ONLINE'];
+    if (!validPaymentMethods.includes(paymentMethod)) {
+      return res.status(400).json({ message: 'Invalid payment method' });
+    }
+
+    // Check if already paid
+    if (order.isPaid) {
+      return res.status(400).json({ message: 'Order is already paid' });
+    }
+
+    // Apply discount if provided
+    if (discount && discount > 0) {
+      order.discount = discount;
+      order.total = order.subtotal + order.tax - discount;
+    }
+
+    // Validate amount paid
+    if (amountPaid < order.total) {
+      return res.status(400).json({ 
+        message: 'Insufficient payment amount',
+        required: order.total,
+        received: amountPaid
+      });
+    }
+
+    // Update order with payment details
+    order.paymentMethod = paymentMethod;
+    order.paymentStatus = 'PAID';
+    order.isPaid = true;
+    order.status = 'SERVED'; // Mark order as served when paid
+
+    await order.save();
+
+    const updatedOrder = await Order.findById(id)
+      .populate('waiter', 'name username')
+      .populate('items.menuItem', 'name category');
+
+    res.status(200).json({
+      message: 'Payment processed successfully',
+      order: updatedOrder,
+      change: amountPaid - order.total
+    });
+  } catch (error) {
+    console.error('Process payment error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /orders/:id/bill/split - Split bill for an order
+router.post('/:id/bill/split', authenticateToken, requireStaff, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { splitCount, splitType } = req.body; // splitType: 'equal' or 'custom'
+
+    const order = await Order.findById(id)
+      .populate('items.menuItem', 'name category price');
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    if (order.isPaid) {
+      return res.status(400).json({ message: 'Cannot split paid order' });
+    }
+
+    let splitBills = [];
+
+    if (splitType === 'equal') {
+      // Split equally
+      const amountPerPerson = Math.round((order.total / splitCount) * 100) / 100;
+      
+      for (let i = 0; i < splitCount; i++) {
+        splitBills.push({
+          splitNumber: i + 1,
+          amount: i === splitCount - 1 
+            ? order.total - (amountPerPerson * (splitCount - 1)) // Last person pays remainder
+            : amountPerPerson,
+          items: 'Shared equally'
+        });
+      }
+    }
+
+    res.status(200).json({
+      message: 'Bill split calculated',
+      orderId: order.orderId,
+      totalAmount: order.total,
+      splitCount,
+      splitBills
+    });
+  } catch (error) {
+    console.error('Split bill error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET /orders/billing/unpaid - Get all unpaid orders
+router.get('/billing/unpaid', authenticateToken, requireStaff, async (req, res) => {
+  try {
+    const unpaidOrders = await Order.find({ 
+      isPaid: false,
+      status: { $ne: 'CANCELLED' }
+    })
+      .populate('waiter', 'name username')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Manually populate and ensure all fields
+    const Menu = require('../models/Menu');
+    const User = require('../models/User');
+    
+    for (let order of unpaidOrders) {
+      if (order.waiter) {
+        const waiter = await User.findById(order.waiter).select('name username').lean();
+        order.waiter = waiter;
+      }
+      
+      for (let item of order.items) {
+        if (item.menuItem) {
+          const menuItem = await Menu.findById(item.menuItem).select('name category').lean();
+          item.menuItem = menuItem;
+        }
+        if (!item.status) {
+          item.status = 'PENDING';
+        }
+      }
+    }
+
+    res.status(200).json({
+      count: unpaidOrders.length,
+      orders: unpaidOrders
+    });
+  } catch (error) {
+    console.error('Get unpaid orders error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /orders/:id/bill/discount - Apply discount to order
+router.post('/:id/bill/discount', authenticateToken, requireStaff, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { discount, discountType } = req.body; // discountType: 'amount' or 'percentage'
+
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    if (order.isPaid) {
+      return res.status(400).json({ message: 'Cannot apply discount to paid order' });
+    }
+
+    let discountAmount = 0;
+
+    if (discountType === 'percentage') {
+      if (discount < 0 || discount > 100) {
+        return res.status(400).json({ message: 'Invalid discount percentage' });
+      }
+      discountAmount = Math.round((order.subtotal * discount / 100) * 100) / 100;
+    } else {
+      if (discount < 0 || discount > order.subtotal) {
+        return res.status(400).json({ message: 'Invalid discount amount' });
+      }
+      discountAmount = discount;
+    }
+
+    order.discount = discountAmount;
+    order.total = order.subtotal + order.tax - discountAmount;
+
+    await order.save();
+
+    const updatedOrder = await Order.findById(id)
+      .populate('waiter', 'name username')
+      .populate('items.menuItem', 'name category');
+
+    res.status(200).json({
+      message: 'Discount applied successfully',
+      order: updatedOrder,
+      discountApplied: discountAmount
+    });
+  } catch (error) {
+    console.error('Apply discount error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

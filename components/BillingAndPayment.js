@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { TableStatus, OrderStatus, UserRole } from '../types';
 import { 
   Receipt, 
@@ -9,7 +10,8 @@ import {
   Clock, 
   Download,
   Edit3,
-  History
+  History,
+  Smartphone
 } from 'lucide-react';
 
 const BillingAndPayment = ({ tables, orders, userRole, onFinalize, onEditBill, onCancelBill, onVoidPaidBill }) => {
@@ -21,6 +23,39 @@ const BillingAndPayment = ({ tables, orders, userRole, onFinalize, onEditBill, o
   const [discountType, setDiscountType] = useState('percentage'); // 'percentage' or 'amount'
   const [editedItems, setEditedItems] = useState({});
   const [isEditingBill, setIsEditingBill] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [unpaidOrders, setUnpaidOrders] = useState([]);
+
+  // Get auth token
+  const getAuthToken = () => {
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    return user.token;
+  };
+
+  // API configuration
+  const api = axios.create({
+    baseURL: 'http://localhost:5002/api',
+    headers: {
+      'Authorization': `Bearer ${getAuthToken()}`
+    }
+  });
+
+  // Fetch unpaid orders
+  const fetchUnpaidOrders = async () => {
+    try {
+      const response = await api.get('/orders/billing/unpaid');
+      setUnpaidOrders(response.data.orders);
+    } catch (error) {
+      console.error('Error fetching unpaid orders:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnpaidOrders();
+    const interval = setInterval(fetchUnpaidOrders, 10000); // Refresh every 10 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const pendingTables = tables.filter(t => t.status === TableStatus.OCCUPIED && !t.masterTableId);
   const currentTable = tables.find(t => t.id === selectedTableId);
@@ -69,19 +104,68 @@ const BillingAndPayment = ({ tables, orders, userRole, onFinalize, onEditBill, o
     }));
   };
 
-  const handlePay = () => {
-    if (!selectedTableId || !paymentMethod) return; 
-    setIsSuccess(true);
-    setTimeout(() => {
-      onFinalize(selectedTableId);
-      setSelectedTableId(null);
-      setPaymentMethod(null);
-      setIsSuccess(false);
-    }, 2000);
+  const handlePay = async () => {
+    if (!selectedTableId || !paymentMethod || !currentOrder) return;
+    
+    setLoading(true);
+    try {
+      // First apply discount if any
+      if (discount > 0) {
+        await api.post(`/orders/${currentOrder.id}/bill/discount`, {
+          discount,
+          discountType
+        });
+      }
+
+      // Calculate total with edited items if any
+      const orderTotal = isEditingBill ? getEditedOrderTotal() : currentOrder.total;
+      const { total } = calculateTotals(orderTotal);
+
+      // Process payment
+      const response = await api.post(`/orders/${currentOrder.id}/bill/pay`, {
+        paymentMethod,
+        amountPaid: total,
+        discount: discount > 0 ? (discountType === 'percentage' ? (orderTotal * discount / 100) : discount) : 0
+      });
+
+      setIsSuccess(true);
+      setMessage({ type: 'success', text: 'Payment processed successfully!' });
+      
+      setTimeout(() => {
+        onFinalize(selectedTableId);
+        setSelectedTableId(null);
+        setPaymentMethod(null);
+        setIsSuccess(false);
+        setDiscount(0);
+        setEditedItems({});
+        setIsEditingBill(false);
+        fetchUnpaidOrders();
+      }, 2000);
+    } catch (error) {
+      console.error('Payment error:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.message || 'Failed to process payment' 
+      });
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in duration-500">
+      {/* Message Display */}
+      {message.text && (
+        <div className={`p-4 rounded-2xl flex items-center gap-3 ${
+          message.type === 'success' 
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+            : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {message.text}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-gray-900">Billing Center</h1>
@@ -276,12 +360,15 @@ const BillingAndPayment = ({ tables, orders, userRole, onFinalize, onEditBill, o
                 <div className="flex gap-8 items-end relative">
                   <div className="flex-1 space-y-4">
                     <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Payment Method</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <button onClick={() => setPaymentMethod('CARD')} className={`p-8 rounded-[32px] border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === 'CARD' ? 'border-emerald-500 bg-emerald-50/20 ring-4 ring-emerald-50 text-emerald-700' : 'bg-white border-gray-50 text-gray-400 hover:border-emerald-200'}`}>
-                        <CreditCard size={32} /><span className="text-[10px] font-black uppercase tracking-widest">Credit Card</span>
+                    <div className="grid grid-cols-3 gap-4">
+                      <button onClick={() => setPaymentMethod('CARD')} className={`p-6 rounded-[24px] border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'CARD' ? 'border-emerald-500 bg-emerald-50/20 ring-4 ring-emerald-50 text-emerald-700' : 'bg-white border-gray-50 text-gray-400 hover:border-emerald-200'}`}>
+                        <CreditCard size={28} /><span className="text-[9px] font-black uppercase tracking-widest">Card</span>
                       </button>
-                      <button onClick={() => setPaymentMethod('CASH')} className={`p-8 rounded-[32px] border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === 'CASH' ? 'border-emerald-500 bg-emerald-50/20 ring-4 ring-emerald-50 text-emerald-700' : 'bg-white border-gray-50 text-gray-400 hover:border-emerald-200'}`}>
-                        <Banknote size={32} /><span className="text-[10px] font-black uppercase tracking-widest">Cash</span>
+                      <button onClick={() => setPaymentMethod('CASH')} className={`p-6 rounded-[24px] border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'CASH' ? 'border-emerald-500 bg-emerald-50/20 ring-4 ring-emerald-50 text-emerald-700' : 'bg-white border-gray-50 text-gray-400 hover:border-emerald-200'}`}>
+                        <Banknote size={28} /><span className="text-[9px] font-black uppercase tracking-widest">Cash</span>
+                      </button>
+                      <button onClick={() => setPaymentMethod('UPI')} className={`p-6 rounded-[24px] border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'UPI' ? 'border-emerald-500 bg-emerald-50/20 ring-4 ring-emerald-50 text-emerald-700' : 'bg-white border-gray-50 text-gray-400 hover:border-emerald-200'}`}>
+                        <Smartphone size={28} /><span className="text-[9px] font-black uppercase tracking-widest">UPI</span>
                       </button>
                     </div>
                   </div>
@@ -319,13 +406,13 @@ const BillingAndPayment = ({ tables, orders, userRole, onFinalize, onEditBill, o
 
               <div className="p-10 bg-gray-50/50 border-t border-gray-100">
                 <button 
-                  disabled={!paymentMethod}
+                  disabled={!paymentMethod || loading}
                   onClick={handlePay}
                   className={`w-full py-6 rounded-[32px] font-black text-lg transition-all shadow-xl active:scale-[0.98] ${
-                    paymentMethod ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    paymentMethod && !loading ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  {paymentMethod ? 'CONFIRM SETTLEMENT' : 'CHOOSE PAYMENT TO CONTINUE'}
+                  {loading ? 'PROCESSING...' : paymentMethod ? 'CONFIRM SETTLEMENT' : 'CHOOSE PAYMENT TO CONTINUE'}
                 </button>
               </div>
             </div>
