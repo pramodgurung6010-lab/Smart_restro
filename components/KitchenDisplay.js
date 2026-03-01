@@ -6,6 +6,7 @@ import { ChefHat, CheckCircle2, Clock, Eye, ShoppingBasket, Play, CheckCircle, L
 const KitchenDisplay = ({ role }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Get auth token
@@ -23,9 +24,13 @@ const KitchenDisplay = ({ role }) => {
   });
 
   // Fetch orders from backend
-  const fetchOrders = async () => {
+  const fetchOrders = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
       const response = await api.get('/orders');
       console.log('📦 Fetched orders:', response.data.orders);
       const backendOrders = response.data.orders.map(order => ({
@@ -52,9 +57,15 @@ const KitchenDisplay = ({ role }) => {
       setOrders(backendOrders);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      showMessage('error', 'Failed to load orders');
+      if (isInitialLoad) {
+        showMessage('error', 'Failed to load orders');
+      }
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      } else {
+        setIsRefreshing(false);
+      }
     }
   };
 
@@ -69,7 +80,7 @@ const KitchenDisplay = ({ role }) => {
     try {
       await api.patch(`/orders/${orderId}/status`, { status: newStatus });
       showMessage('success', `Order status updated to ${newStatus}`);
-      fetchOrders();
+      fetchOrders(false); // Refresh without loading spinner
     } catch (error) {
       console.error('Error updating order status:', error);
       showMessage('error', 'Failed to update order status');
@@ -86,7 +97,7 @@ const KitchenDisplay = ({ role }) => {
       });
       console.log('✅ Item status update response:', response.data);
       showMessage('success', `Item status updated to ${newStatus}`);
-      fetchOrders();
+      fetchOrders(false); // Refresh without loading spinner
     } catch (error) {
       console.error('❌ Error updating item status:', error);
       console.error('Error details:', error.response?.data || error.message);
@@ -96,8 +107,8 @@ const KitchenDisplay = ({ role }) => {
 
   // Fetch orders on mount and set up polling
   useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 5000); // Refresh every 5 seconds
+    fetchOrders(true); // Initial load with loading spinner
+    const interval = setInterval(() => fetchOrders(false), 5000); // Background refresh without loading spinner
     return () => clearInterval(interval);
   }, []);
 
