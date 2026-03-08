@@ -3,15 +3,13 @@ import axios from 'axios';
 import { TableStatus, OrderStatus, UserRole } from '../types';
 import { 
   Receipt, 
-  CreditCard, 
   Banknote, 
   Printer, 
   CheckCircle, 
   Clock, 
   Download,
   Edit3,
-  History,
-  Smartphone
+  History
 } from 'lucide-react';
 
 const BillingAndPayment = ({ tables, orders, userRole, onFinalize, onEditBill, onCancelBill, onVoidPaidBill }) => {
@@ -360,15 +358,9 @@ const BillingAndPayment = ({ tables, orders, userRole, onFinalize, onEditBill, o
                 <div className="flex gap-8 items-end relative">
                   <div className="flex-1 space-y-4">
                     <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Payment Method</p>
-                    <div className="grid grid-cols-3 gap-4">
-                      <button onClick={() => setPaymentMethod('CARD')} className={`p-6 rounded-[24px] border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'CARD' ? 'border-emerald-500 bg-emerald-50/20 ring-4 ring-emerald-50 text-emerald-700' : 'bg-white border-gray-50 text-gray-400 hover:border-emerald-200'}`}>
-                        <CreditCard size={28} /><span className="text-[9px] font-black uppercase tracking-widest">Card</span>
-                      </button>
-                      <button onClick={() => setPaymentMethod('CASH')} className={`p-6 rounded-[24px] border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'CASH' ? 'border-emerald-500 bg-emerald-50/20 ring-4 ring-emerald-50 text-emerald-700' : 'bg-white border-gray-50 text-gray-400 hover:border-emerald-200'}`}>
-                        <Banknote size={28} /><span className="text-[9px] font-black uppercase tracking-widest">Cash</span>
-                      </button>
-                      <button onClick={() => setPaymentMethod('UPI')} className={`p-6 rounded-[24px] border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'UPI' ? 'border-emerald-500 bg-emerald-50/20 ring-4 ring-emerald-50 text-emerald-700' : 'bg-white border-gray-50 text-gray-400 hover:border-emerald-200'}`}>
-                        <Smartphone size={28} /><span className="text-[9px] font-black uppercase tracking-widest">UPI</span>
+                    <div className="flex justify-center">
+                      <button onClick={() => setPaymentMethod('CASH')} className={`p-8 rounded-[32px] border-2 transition-all flex flex-col items-center gap-3 w-64 ${paymentMethod === 'CASH' ? 'border-emerald-500 bg-emerald-50/20 ring-4 ring-emerald-50 text-emerald-700' : 'bg-white border-gray-50 text-gray-400 hover:border-emerald-200'}`}>
+                        <Banknote size={40} /><span className="text-[11px] font-black uppercase tracking-widest">Cash Payment</span>
                       </button>
                     </div>
                   </div>
