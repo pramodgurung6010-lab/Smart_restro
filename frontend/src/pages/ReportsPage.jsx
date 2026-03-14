@@ -1,17 +1,44 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { OrderStatus } from '../types';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import axios from 'axios';
 import { Download, TrendingUp, Calendar, FileText, History as HistoryIcon, ArrowRight } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
-const ReportsPage = ({ orders }) => {
+const ReportsPage = () => {
+  const [orders, setOrders] = useState([]);
   const [startDate, setStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportHistory, setReportHistory] = useState([]);
+  const [settlementFilter, setSettlementFilter] = useState('ALL');
 
   const startInputRef = useRef(null);
   const endInputRef = useRef(null);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const response = await axios.get('http://localhost:5002/api/orders', {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+        const backendOrders = (response.data.orders || []).map(o => ({
+          id: o._id,
+          orderId: o.orderId,
+          tableNumber: o.tableNumber,
+          waiterId: o.waiterName || 'Staff',
+          total: o.total || 0,
+          isPaid: o.isPaid === true || o.paymentStatus === 'PAID',
+          status: o.status,
+          createdAt: new Date(o.createdAt).getTime(),
+          items: o.items || []
+        }));
+        setOrders(backendOrders);
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+      }
+    };
+    fetchOrders();
+  }, []);
 
   // Helper to format date for display like in the image (DD/MM/YYYY)
   const formatDateDisplay = (dateStr) => {
@@ -29,7 +56,9 @@ const ReportsPage = ({ orders }) => {
   // Derived Stats
   const stats = useMemo(() => {
     const paidOrders = filteredOrders.filter(o => o.isPaid);
-    const totalRevenue = paidOrders.reduce((acc, o) => acc + o.total, 0);
+    // Count revenue from all completed orders (PAID, SERVED, or any with total > 0)
+    const revenueOrders = filteredOrders.filter(o => o.total > 0);
+    const totalRevenue = revenueOrders.reduce((acc, o) => acc + (parseFloat(o.total) || 0), 0);
     const orderCount = filteredOrders.length;
     const aov = orderCount > 0 ? totalRevenue / orderCount : 0;
     return { totalRevenue, orderCount, aov, paidCount: paidOrders.length };
@@ -197,17 +226,45 @@ const ReportsPage = ({ orders }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white p-8 rounded-[40px] shadow-sm border border-gray-100">
-          <h3 className="text-xl font-black text-gray-900 mb-8">Revenue Performance</h3>
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={filteredOrders.slice(-15).map(o => ({ id: o.id.slice(-4), total: o.total }))}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="id" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10}} />
-                <Tooltip cursor={{fill: '#f9fafb'}} contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)'}} />
-                <Bar dataKey="total" fill="#10b981" radius={[6, 6, 0, 0]} barSize={32} />
-              </BarChart>
-            </ResponsiveContainer>
+          <h3 className="text-xl font-black text-gray-900 mb-6">Revenue Performance</h3>
+          {filteredOrders.length === 0 ? (
+            <div className="flex items-center justify-center h-48 text-gray-400 text-sm">No orders in selected date range</div>
+          ) : (
+            <div className="space-y-4">
+              {/* Daily revenue bars */}
+              {(() => {
+                const dailyMap = {};
+                filteredOrders.forEach(o => {
+                  const day = new Date(o.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+                  dailyMap[day] = (dailyMap[day] || 0) + (parseFloat(o.total) || 0);
+                });
+                const days = Object.entries(dailyMap).slice(-7);
+                const maxVal = Math.max(...days.map(([,v]) => v), 1);
+                return days.map(([day, val]) => (
+                  <div key={day} className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-gray-400 w-16 shrink-0">{day}</span>
+                    <div className="flex-1 bg-gray-50 rounded-full h-6 overflow-hidden">
+                      <div 
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                        style={{ width: `${Math.max((val / maxVal) * 100, 2)}%` }}
+                      >
+                        <span className="text-[9px] font-black text-white">Rs.{val.toFixed(0)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          )}
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <div className="bg-emerald-50 rounded-2xl p-4">
+              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Total Revenue</p>
+              <p className="text-xl font-black text-emerald-800">Rs.{stats.totalRevenue.toFixed(2)}</p>
+            </div>
+            <div className="bg-gray-50 rounded-2xl p-4">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Avg Order Value</p>
+              <p className="text-xl font-black text-gray-800">Rs.{stats.aov.toFixed(2)}</p>
+            </div>
           </div>
         </div>
 
@@ -237,9 +294,28 @@ const ReportsPage = ({ orders }) => {
 
       {/* Audit Trail Table */}
       <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-8 border-b border-gray-100 flex items-center justify-between">
+        <div className="p-8 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4">
           <h3 className="text-xl font-black text-gray-900">Historical Log</h3>
-          <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-black">{filteredOrders.length} records in range</div>
+          <div className="flex items-center gap-3">
+            {/* Settlement filter */}
+            <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100">
+              {['ALL', 'SETTLED', 'UNPAID'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setSettlementFilter(f)}
+                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                    settlementFilter === f
+                      ? f === 'SETTLED' ? 'bg-emerald-600 text-white shadow'
+                        : f === 'UNPAID' ? 'bg-red-500 text-white shadow'
+                        : 'bg-white text-gray-700 shadow'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  {f === 'ALL' ? `All (${filteredOrders.length})` : f === 'SETTLED' ? `Settled (${filteredOrders.filter(o => o.isPaid).length})` : `Unpaid (${filteredOrders.filter(o => !o.isPaid).length})`}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -253,21 +329,27 @@ const ReportsPage = ({ orders }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filteredOrders.length > 0 ? filteredOrders.slice().reverse().map((order) => (
-                <tr key={order.id} className="hover:bg-emerald-50/20 transition-colors group">
-                  <td className="px-10 py-5 font-black text-gray-900">#ORD-{order.id.slice(-6).toUpperCase()}</td>
-                  <td className="px-10 py-5 text-gray-400 font-mono text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>
-                  <td className="px-10 py-5 text-gray-500 font-bold">{order.waiterId}</td>
-                  <td className="px-10 py-5 font-black text-gray-900">Rs.{order.total.toFixed(2)}</td>
-                  <td className="px-10 py-5 text-right">
-                    <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${order.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
-                      {order.isPaid ? 'Settled' : 'Unpaid'}
-                    </span>
-                  </td>
-                </tr>
-              )) : (
-                <tr><td colSpan={5} className="px-10 py-20 text-center text-gray-300 italic">No records found for this period</td></tr>
-              )}
+              {(() => {
+                const display = filteredOrders
+                  .slice()
+                  .reverse()
+                  .filter(o => settlementFilter === 'ALL' || (settlementFilter === 'SETTLED' ? o.isPaid : !o.isPaid));
+                return display.length > 0 ? display.map((order) => (
+                  <tr key={order.id} className="hover:bg-emerald-50/20 transition-colors group">
+                    <td className="px-10 py-5 font-black text-gray-900">#ORD-{order.id.slice(-6).toUpperCase()}</td>
+                    <td className="px-10 py-5 text-gray-400 font-mono text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>
+                    <td className="px-10 py-5 text-gray-500 font-bold">{order.waiterId}</td>
+                    <td className="px-10 py-5 font-black text-gray-900">Rs.{order.total.toFixed(2)}</td>
+                    <td className="px-10 py-5 text-right">
+                      <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${order.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
+                        {order.isPaid ? 'Settled' : 'Unpaid'}
+                      </span>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={5} className="px-10 py-20 text-center text-gray-300 italic">No records found</td></tr>
+                );
+              })()}
             </tbody>
           </table>
         </div>

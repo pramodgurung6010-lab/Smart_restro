@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { OrderStatus, UserRole } from '../types';
+import { UserRole } from '../types';
 import { ChefHat, CheckCircle2, Clock, Eye, ShoppingBasket, Play, CheckCircle, Loader } from 'lucide-react';
 
 const KitchenDisplay = ({ role }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Get auth token
@@ -28,8 +27,6 @@ const KitchenDisplay = ({ role }) => {
     try {
       if (isInitialLoad) {
         setLoading(true);
-      } else {
-        setIsRefreshing(true);
       }
       const response = await api.get('/orders');
       console.log('📦 Fetched orders:', response.data.orders);
@@ -63,8 +60,6 @@ const KitchenDisplay = ({ role }) => {
     } finally {
       if (isInitialLoad) {
         setLoading(false);
-      } else {
-        setIsRefreshing(false);
       }
     }
   };

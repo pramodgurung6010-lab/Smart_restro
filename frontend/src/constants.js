@@ -6,20 +6,9 @@ import {
   Receipt, 
   BarChart3, 
   Users, 
-  Settings, 
   UserCircle
 } from 'lucide-react';
 import { TableStatus, UserRole } from './types';
-
-export const INITIAL_MENU = [
-  { id: '1', name: 'Margherita Pizza', category: 'Main', price: 299, available: true },
-  { id: '2', name: 'Caesar Salad', category: 'Starters', price: 199, available: true },
-  { id: '3', name: 'Grilled Salmon', category: 'Main', price: 599, available: true },
-  { id: '4', name: 'Tiramisu', category: 'Dessert', price: 149, available: true },
-  { id: '5', name: 'Iced Tea', category: 'Beverage', price: 79, available: true },
-  { id: '6', name: 'Pasta Carbonara', category: 'Main', price: 349, available: true },
-  { id: '7', name: 'Garlic Bread', category: 'Starters', price: 99, available: true },
-];
 
 // 15 tables as per spec with specific capacities
 export const INITIAL_TABLES = [

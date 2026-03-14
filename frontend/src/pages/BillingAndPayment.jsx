@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { TableStatus, OrderStatus, UserRole } from '../types';
+import { TableStatus } from '../types';
 import { 
   Receipt, 
   Banknote, 
@@ -12,18 +12,19 @@ import {
   History
 } from 'lucide-react';
 
-const BillingAndPayment = ({ tables, orders, userRole, onFinalize, onEditBill, onCancelBill, onVoidPaidBill }) => {
+const BillingAndPayment = ({ userRole }) => {
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [view, setView] = useState('PENDING');
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [discount, setDiscount] = useState(0);
-  const [discountType, setDiscountType] = useState('percentage'); // 'percentage' or 'amount'
+  const [discountType, setDiscountType] = useState('percentage');
   const [editedItems, setEditedItems] = useState({});
   const [isEditingBill, setIsEditingBill] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [unpaidOrders, setUnpaidOrders] = useState([]);
+  const [tables, setTables] = useState([]);
+  const [orders, setOrders] = useState([]);
 
   // Get auth token
   const getAuthToken = () => {
@@ -39,19 +40,45 @@ const BillingAndPayment = ({ tables, orders, userRole, onFinalize, onEditBill, o
     }
   });
 
-  // Fetch unpaid orders
-  const fetchUnpaidOrders = async () => {
+  // Fetch all orders and build table list
+  const fetchOrdersAndTables = async () => {
     try {
-      const response = await api.get('/orders/billing/unpaid');
-      setUnpaidOrders(response.data.orders);
+      const response = await api.get('/orders');
+      const backendOrders = response.data.orders || [];
+      setOrders(backendOrders.map(o => ({
+        id: o._id,
+        tableId: o.tableId,
+        tableNumber: o.tableNumber,
+        items: o.items,
+        status: o.status,
+        subtotal: o.subtotal || 0,
+        tax: o.tax || 0,
+        total: o.total || 0,
+        createdAt: o.createdAt
+      })));
+
+      // Build occupied tables from active orders
+      const occupiedTables = backendOrders
+        .filter(o => !['SERVED', 'CANCELLED', 'PAID'].includes(o.status))
+        .map(o => ({
+          id: o.tableId,
+          number: o.tableNumber,
+          status: TableStatus.OCCUPIED,
+          currentOrderId: o._id
+        }));
+      // Deduplicate by tableId
+      const unique = occupiedTables.filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
+      setTables(unique);
     } catch (error) {
-      console.error('Error fetching unpaid orders:', error);
+      console.error('Error fetching orders:', error);
     }
   };
 
   useEffect(() => {
-    fetchUnpaidOrders();
-    const interval = setInterval(fetchUnpaidOrders, 10000); // Refresh every 10 seconds
+    fetchOrdersAndTables();
+    const interval = setInterval(() => {
+      fetchOrdersAndTables();
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -106,46 +133,41 @@ const BillingAndPayment = ({ tables, orders, userRole, onFinalize, onEditBill, o
     if (!selectedTableId || !paymentMethod || !currentOrder) return;
     
     setLoading(true);
+    setMessage({ type: '', text: '' });
     try {
-      // First apply discount if any
-      if (discount > 0) {
-        await api.post(`/orders/${currentOrder.id}/bill/discount`, {
-          discount,
-          discountType
-        });
-      }
+      // Calculate the actual total shown to user (with service charge)
+      const orderSubtotal = isEditingBill ? getEditedOrderTotal() : currentOrder.subtotal || currentOrder.total;
+      const { total: displayTotal } = calculateTotals(orderSubtotal);
 
-      // Calculate total with edited items if any
-      const orderTotal = isEditingBill ? getEditedOrderTotal() : currentOrder.total;
-      const { total } = calculateTotals(orderTotal);
-
-      // Process payment
       const response = await api.post(`/orders/${currentOrder.id}/bill/pay`, {
         paymentMethod,
-        amountPaid: total,
-        discount: discount > 0 ? (discountType === 'percentage' ? (orderTotal * discount / 100) : discount) : 0
+        amountPaid: displayTotal,
+        discount: 0
       });
 
-      setIsSuccess(true);
-      setMessage({ type: 'success', text: 'Payment processed successfully!' });
-      
-      setTimeout(() => {
-        onFinalize(selectedTableId);
-        setSelectedTableId(null);
-        setPaymentMethod(null);
-        setIsSuccess(false);
-        setDiscount(0);
-        setEditedItems({});
-        setIsEditingBill(false);
-        fetchUnpaidOrders();
-      }, 2000);
+      if (response.data.message === 'Payment processed successfully') {
+        setIsSuccess(true);
+        setMessage({ type: 'success', text: 'Payment processed successfully!' });
+        
+        await fetchOrdersAndTables();
+        
+        setTimeout(() => {
+          setSelectedTableId(null);
+          setPaymentMethod(null);
+          setIsSuccess(false);
+          setDiscount(0);
+          setEditedItems({});
+          setIsEditingBill(false);
+          setMessage({ type: '', text: '' });
+        }, 1500);
+      }
     } catch (error) {
       console.error('Payment error:', error);
       setMessage({ 
         type: 'error', 
         text: error.response?.data?.message || 'Failed to process payment' 
       });
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      setTimeout(() => setMessage({ type: '', text: '' }), 4000);
     } finally {
       setLoading(false);
     }
@@ -252,7 +274,7 @@ const BillingAndPayment = ({ tables, orders, userRole, onFinalize, onEditBill, o
                   <div className="flex gap-2">
                     <button className="p-3.5 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-2xl border border-gray-100 transition-all"><Printer size={22} /></button>
                     <button className="p-3.5 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-2xl border border-gray-100 transition-all"><Download size={22} /></button>
-                    <button onClick={() => onEditBill(selectedTableId)} className="p-3.5 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-2xl border border-gray-100 transition-all"><Edit3 size={22} /></button>
+                    <button onClick={() => setIsEditingBill(true)} className="p-3.5 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-2xl border border-gray-100 transition-all"><Edit3 size={22} /></button>
                   </div>
                 </div>
 

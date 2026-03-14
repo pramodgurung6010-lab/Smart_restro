@@ -210,3 +210,4 @@ const TopBar = ({ user, onLogout, onSearch, notifications = [], onClearNotificat
 };
 
 export default TopBar;
+

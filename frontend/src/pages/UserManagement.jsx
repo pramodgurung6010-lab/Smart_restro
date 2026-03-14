@@ -3,7 +3,8 @@ import axios from 'axios';
 import { UserRole } from '../types';
 import { Plus, Edit2, Trash2, Mail, Phone, User, ShieldCheck, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
-const UserManagement = ({ users, setUsers }) => {
+const UserManagement = () => {
+  const [users, setUsers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({ 
@@ -142,7 +143,7 @@ Please share these credentials manually.`);
   };
 
   const deleteUser = async (user) => {
-    if (!confirm(`Are you sure you want to remove ${user.name || user.username}?`)) {
+    if (!window.confirm(`Are you sure you want to remove ${user.name || user.username}?`)) {
       return;
     }
 

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { OrderStatus } from '../types';
-import { CATEGORIES } from '../constants';
-import { ChevronLeft, Plus, Minus, Send, Trash2, ShoppingCart, Loader } from 'lucide-react';
+import { CATEGORIES } from '../constants';import { ChevronLeft, Plus, Minus, Send, ShoppingCart, Loader } from 'lucide-react';
 
-const OrderTaking = ({ table, onSubmitOrder, onCancel, existingOrder }) => {
+const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [cart, setCart] = useState([]);
   const [menu, setMenu] = useState([]);
@@ -54,18 +53,10 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel, existingOrder }) => {
     setTimeout(() => setMessage({ type: '', text: '' }), 5000);
   };
 
-  // Load menu and existing order on component mount
+  // Load menu on component mount
   useEffect(() => {
     fetchMenu();
   }, []);
-
-  useEffect(() => {
-    if (existingOrder) {
-      setCart(existingOrder.items);
-    } else {
-      setCart([]);
-    }
-  }, [existingOrder]);
 
   const filteredMenu = menu.filter(item => 
     (activeCategory === 'All' || item.category === activeCategory) && item.available
@@ -101,15 +92,6 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel, existingOrder }) => {
   const subtotal = cart.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
   const itemsCount = cart.reduce((acc, curr) => acc + curr.quantity, 0);
 
-  const generateOrderNumber = () => {
-    const today = new Date();
-    const year = today.getFullYear().toString().slice(-2);
-    const month = (today.getMonth() + 1).toString().padStart(2, '0');
-    const day = today.getDate().toString().padStart(2, '0');
-    const timestamp = Date.now().toString().slice(-4);
-    return `ORD${year}${month}${day}${timestamp}`;
-  };
-
   const handleSubmit = async () => {
     if (cart.length === 0) return;
     
@@ -127,25 +109,17 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel, existingOrder }) => {
         }))
       };
 
-      if (existingOrder) {
-        // Update existing order
-        const response = await api.put(`/orders/${existingOrder.id}`, {
-          items: orderData.items
-        });
-        showMessage('success', 'Order updated successfully!');
-        onSubmitOrder(response.data.order);
-      } else {
-        // Create new order
-        const response = await api.post('/orders', orderData);
-        showMessage('success', 'Order submitted to kitchen!');
-        onSubmitOrder(response.data.order);
-      }
+      // Create new order
+      const response = await api.post('/orders', orderData);
+      showMessage('success', 'Order submitted to kitchen!');
+      onSubmitOrder(response.data.order);
       
       // Clear cart after successful submission
       setCart([]);
       
     } catch (error) {
       console.error('Error submitting order:', error);
+      console.error('Error response data:', error.response?.data);
       const errorMessage = error.response?.data?.message || 'Failed to submit order';
       showMessage('error', errorMessage);
     } finally {
@@ -290,9 +264,9 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel, existingOrder }) => {
                   SUBMITTING...
                 </>
               ) : (
-                <>
+                  <>
                   <Send size={18} />
-                  {existingOrder ? 'UPDATE KITCHEN' : 'SUBMIT TO KITCHEN'}
+                  SUBMIT TO KITCHEN
                 </>
               )}
             </button>

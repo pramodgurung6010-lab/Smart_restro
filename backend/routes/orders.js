@@ -324,19 +324,55 @@ router.post('/', authenticateToken, requireStaff, async (req, res) => {
 router.put('/:id', authenticateToken, requireStaff, async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateData = { ...req.body };
 
     // Don't allow updating certain fields directly
     delete updateData.orderId;
     delete updateData.createdAt;
     delete updateData.updatedAt;
 
-    const updatedOrder = await Order.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('waiter', 'name username')
-     .populate('items.menuItem', 'name category');
+    // If the client sends lightweight items with menuItemId, rebuild full items and totals
+    if (Array.isArray(updateData.items) && updateData.items.length > 0) {
+      const Menu = require('../models/Menu');
+
+      const orderItems = [];
+
+      for (const item of updateData.items) {
+        const menuItem = await Menu.findById(item.menuItemId);
+        if (!menuItem) {
+          return res.status(400).json({ message: `Menu item not found: ${item.menuItemId}` });
+        }
+
+        if (!menuItem.isAvailable) {
+          return res.status(400).json({ message: `Menu item not available: ${menuItem.name}` });
+        }
+
+        orderItems.push({
+          menuItem: menuItem._id,
+          name: menuItem.name,
+          price: menuItem.price,
+          quantity: item.quantity,
+          specialInstructions: item.specialInstructions || '',
+          status: item.status || 'PENDING',
+        });
+      }
+
+      const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const tax = Math.round(subtotal * 0.05 * 100) / 100;
+      const total = Math.round((subtotal + tax) * 100) / 100;
+
+      updateData.items = orderItems;
+      updateData.subtotal = subtotal;
+      updateData.tax = tax;
+      updateData.total = total;
+    }
+
+    const updatedOrder = await Order.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    })
+      .populate('waiter', 'name username')
+      .populate('items.menuItem', 'name category');
 
     if (!updatedOrder) {
       return res.status(404).json({ message: 'Order not found' });
@@ -344,14 +380,14 @@ router.put('/:id', authenticateToken, requireStaff, async (req, res) => {
 
     res.status(200).json({
       message: 'Order updated successfully',
-      order: updatedOrder
+      order: updatedOrder,
     });
   } catch (error) {
     console.error('Update order error:', error);
     if (error.name === 'ValidationError') {
-      return res.status(400).json({ 
-        message: 'Validation error', 
-        details: Object.values(error.errors).map(e => e.message)
+      return res.status(400).json({
+        message: 'Validation error',
+        details: Object.values(error.errors).map((e) => e.message),
       });
     }
     res.status(500).json({ message: 'Server error' });
@@ -660,15 +696,6 @@ router.post('/:id/bill/pay', authenticateToken, requireStaff, async (req, res) =
     if (discount && discount > 0) {
       order.discount = discount;
       order.total = order.subtotal + order.tax - discount;
-    }
-
-    // Validate amount paid
-    if (amountPaid < order.total) {
-      return res.status(400).json({ 
-        message: 'Insufficient payment amount',
-        required: order.total,
-        received: amountPaid
-      });
     }
 
     // Update order with payment details
