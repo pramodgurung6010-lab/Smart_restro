@@ -67,8 +67,9 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 10000); // Refresh every 10 seconds
+    const interval = setInterval(fetchDashboardData, 10000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   return (

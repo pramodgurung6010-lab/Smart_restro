@@ -54,9 +54,8 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
   };
 
   // Load menu on component mount
-  useEffect(() => {
-    fetchMenu();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchMenu(); }, []);
 
   const filteredMenu = menu.filter(item => 
     (activeCategory === 'All' || item.category === activeCategory) && item.available

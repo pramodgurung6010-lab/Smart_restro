@@ -213,6 +213,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
                 type="password" 
                 value={passwordData.currentPassword}
                 onChange={e => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                autoComplete="current-password"
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" 
                 required
               />
@@ -223,6 +224,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
                 type="password" 
                 value={passwordData.newPassword}
                 onChange={e => setPasswordData({...passwordData, newPassword: e.target.value})}
+                autoComplete="new-password"
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" 
                 required
                 minLength={6}
@@ -235,6 +237,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
                 type="password" 
                 value={passwordData.confirmPassword}
                 onChange={e => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                autoComplete="new-password"
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" 
                 required
               />

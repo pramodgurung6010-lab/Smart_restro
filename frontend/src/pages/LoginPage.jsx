@@ -170,6 +170,7 @@ const LoginPage = ({ onLogin }) => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
                 placeholder="Enter your Password"
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-emerald-500 text-gray-900 placeholder-gray-400 disabled:opacity-50"
                 required

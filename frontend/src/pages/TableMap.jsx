@@ -117,6 +117,7 @@ const TableMap = ({ onSelectTable }) => {
     fetchOrders();
     const interval = setInterval(fetchOrders, 5000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const movingTable = reassignMode ? tables.find(t => t.id === reassignMode) : null;
@@ -285,9 +286,9 @@ const TableMap = ({ onSelectTable }) => {
     });
   };
 
-  const handleSplit = (tableId, parts) => {
+  const handleSplit = async (tableId, parts) => {
     const table = tables.find(t => t.id === tableId);
-    if (!table || table.status !== TableStatus.AVAILABLE) return;
+    if (!table) return;
 
     const baseCapacity = Math.floor(table.capacity / parts);
     const remainder = table.capacity % parts;
@@ -296,12 +297,32 @@ const TableMap = ({ onSelectTable }) => {
       id: `split-${tableId}-${i}`,
       number: `${table.number}.${i + 1}`,
       capacity: baseCapacity + (i < remainder ? 1 : 0),
-      status: TableStatus.AVAILABLE,
+      // First sub-table inherits the existing order if parent was occupied
+      status: i === 0 && table.currentOrderId ? TableStatus.OCCUPIED : TableStatus.AVAILABLE,
+      currentOrderId: i === 0 && table.currentOrderId ? table.currentOrderId : undefined,
       parentId: tableId
     }));
 
+    // If parent had an active order, reassign it to sub-table 12.1 / 13.1 in backend
+    if (table.currentOrderId) {
+      try {
+        await api.put(`/orders/${table.currentOrderId}`, {
+          tableId: subTables[0].id,
+          tableNumber: subTables[0].number
+        });
+      } catch (error) {
+        console.error('Error reassigning order to sub-table:', error);
+      }
+    }
+
     setTables(prev => [
-      ...prev.map(t => t.id === tableId ? { ...t, isSplit: true, status: TableStatus.OCCUPIED, originalCapacity: t.capacity } : t),
+      ...prev.map(t => t.id === tableId ? {
+        ...t,
+        isSplit: true,
+        status: TableStatus.OCCUPIED,
+        originalCapacity: t.capacity,
+        currentOrderId: undefined // parent no longer holds the order
+      } : t),
       ...subTables
     ]);
   };
@@ -328,7 +349,8 @@ const TableMap = ({ onSelectTable }) => {
   });
 
   const canSplit = (table) => {
-    return (table.number === '12' || table.number === '13') && !table.parentId && table.status === TableStatus.AVAILABLE;
+    return (table.number === '12' || table.number === '13') && !table.parentId && !table.isSplit &&
+      (table.status === TableStatus.AVAILABLE || table.status === TableStatus.OCCUPIED);
   };
 
   return (
@@ -450,6 +472,9 @@ const TableMap = ({ onSelectTable }) => {
                   >
                     <Move size={14} /> Move
                   </button>
+                  {canSplit(table) && (
+                    <button onClick={(e) => { e.stopPropagation(); setShowSplitModal(table.id); }} className="px-3 bg-white border-2 border-emerald-100 text-emerald-700 rounded-xl py-2.5 text-[10px] font-black uppercase hover:bg-emerald-50 transition-colors shadow-sm"><Columns size={14} /></button>
+                  )}
                 </div>
               ) : (table.status === TableStatus.AVAILABLE || table.mergedWith) && !reassignMode ? (
                 <div className="flex gap-2 w-full">

@@ -102,9 +102,10 @@ const KitchenDisplay = ({ role }) => {
 
   // Fetch orders on mount and set up polling
   useEffect(() => {
-    fetchOrders(true); // Initial load with loading spinner
-    const interval = setInterval(() => fetchOrders(false), 5000); // Background refresh without loading spinner
+    fetchOrders(true);
+    const interval = setInterval(() => fetchOrders(false), 5000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const activeOrders = orders.filter(o => o.status !== 'SERVED' && o.status !== 'CANCELLED');
