@@ -859,4 +859,121 @@ router.post('/:id/bill/discount', authenticateToken, requireStaff, async (req, r
   }
 });
 
+// POST /orders/merge-tables - Merge orders from multiple tables into one
+router.post('/merge-tables', authenticateToken, requireStaff, async (req, res) => {
+  try {
+    const { masterTableId, masterTableNumber, slaveTableIds } = req.body;
+    // slaveTableIds: array of tableIds whose orders should be merged into master
+
+    if (!masterTableId || !slaveTableIds || slaveTableIds.length === 0) {
+      return res.status(400).json({ message: 'masterTableId and slaveTableIds are required' });
+    }
+
+    // Find active order for master table
+    const masterOrder = await Order.findOne({
+      tableId: masterTableId,
+      status: { $nin: ['SERVED', 'CANCELLED'] },
+      isPaid: false
+    });
+
+    // Find active orders for slave tables
+    const slaveOrders = await Order.find({
+      tableId: { $in: slaveTableIds },
+      status: { $nin: ['SERVED', 'CANCELLED'] },
+      isPaid: false
+    });
+
+    if (slaveOrders.length === 0 && !masterOrder) {
+      return res.status(200).json({ message: 'No active orders to merge', merged: false });
+    }
+
+    if (masterOrder && slaveOrders.length > 0) {
+      // Merge all slave items into master order
+      for (const slaveOrder of slaveOrders) {
+        for (const item of slaveOrder.items) {
+          // Check if same menu item already exists in master order
+          const existing = masterOrder.items.find(
+            i => i.menuItem.toString() === item.menuItem.toString()
+          );
+          if (existing) {
+            existing.quantity += item.quantity;
+          } else {
+            masterOrder.items.push({
+              menuItem: item.menuItem,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+              specialInstructions: item.specialInstructions || '',
+              status: item.status || 'PENDING'
+            });
+          }
+        }
+        // Recalculate totals
+        const subtotal = masterOrder.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+        masterOrder.subtotal = subtotal;
+        masterOrder.tax = Math.round(subtotal * 0.05 * 100) / 100;
+        masterOrder.total = Math.round((masterOrder.subtotal + masterOrder.tax) * 100) / 100;
+
+        // Cancel the slave order
+        slaveOrder.status = 'CANCELLED';
+        await slaveOrder.save();
+      }
+      await masterOrder.save();
+
+      return res.status(200).json({
+        message: 'Orders merged successfully',
+        merged: true,
+        order: masterOrder
+      });
+    }
+
+    if (!masterOrder && slaveOrders.length > 0) {
+      // No master order - reassign first slave order to master table
+      const [first, ...rest] = slaveOrders;
+      first.tableId = masterTableId;
+      first.tableNumber = masterTableNumber;
+
+      // Merge remaining slave orders into first
+      for (const slaveOrder of rest) {
+        for (const item of slaveOrder.items) {
+          const existing = first.items.find(
+            i => i.menuItem.toString() === item.menuItem.toString()
+          );
+          if (existing) {
+            existing.quantity += item.quantity;
+          } else {
+            first.items.push({
+              menuItem: item.menuItem,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+              specialInstructions: item.specialInstructions || '',
+              status: item.status || 'PENDING'
+            });
+          }
+        }
+        slaveOrder.status = 'CANCELLED';
+        await slaveOrder.save();
+      }
+
+      const subtotal = first.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+      first.subtotal = subtotal;
+      first.tax = Math.round(subtotal * 0.05 * 100) / 100;
+      first.total = Math.round((first.subtotal + first.tax) * 100) / 100;
+      await first.save();
+
+      return res.status(200).json({
+        message: 'Orders merged successfully',
+        merged: true,
+        order: first
+      });
+    }
+
+    res.status(200).json({ message: 'No slave orders to merge', merged: false });
+  } catch (error) {
+    console.error('Merge orders error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;

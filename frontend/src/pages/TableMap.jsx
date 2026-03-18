@@ -126,6 +126,11 @@ const TableMap = ({ onSelectTable }) => {
     if (mergeMode && selectedForMerge.includes(table.id)) {
       return 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-200 text-emerald-800 scale-105';
     }
+
+    // Sub-tables are selectable in merge mode - show as clickable
+    if (mergeMode && table.parentId && !selectedForMerge.includes(table.id)) {
+      return 'bg-white border-emerald-300 border-dashed hover:border-emerald-500 hover:bg-emerald-50/50 text-emerald-700 cursor-pointer';
+    }
     
     // UI state for the table being moved
     if (reassignMode === table.id) {
@@ -153,7 +158,8 @@ const TableMap = ({ onSelectTable }) => {
 
   const handleTableClick = (table) => {
     if (mergeMode) {
-      if (table.status !== TableStatus.AVAILABLE) return;
+      // Allow selecting AVAILABLE tables OR sub-tables (split parts) regardless of status
+      if (table.status !== TableStatus.AVAILABLE && !table.parentId) return;
       setSelectedForMerge(prev => prev.includes(table.id) ? prev.filter(id => id !== table.id) : [...prev, table.id]);
       return;
     }
@@ -213,9 +219,28 @@ const TableMap = ({ onSelectTable }) => {
     }
   };
 
-  const confirmMerge = () => {
+  const confirmMerge = async () => {
     if (selectedForMerge.length < 2) return;
     const [master, ...others] = selectedForMerge;
+
+    // Get table info for master and slaves
+    const masterTable = tables.find(t => t.id === master);
+    const otherTables = tables.filter(t => others.includes(t.id));
+
+    // Merge orders in backend if any tables have active orders
+    const hasOrders = masterTable?.currentOrderId || otherTables.some(t => t.currentOrderId);
+    if (hasOrders) {
+      try {
+        await api.post('/orders/merge-tables', {
+          masterTableId: master,
+          masterTableNumber: masterTable?.number,
+          slaveTableIds: others
+        });
+      } catch (error) {
+        console.error('Error merging orders:', error);
+      }
+    }
+
     handleMerge(master, others);
     setMergeMode(false);
     setSelectedForMerge([]);
@@ -227,9 +252,25 @@ const TableMap = ({ onSelectTable }) => {
       const otherTables = prev.filter(t => otherIds.includes(t.id));
       if (!masterTable) return prev;
       const totalCapacity = masterTable.capacity + otherTables.reduce((sum, t) => sum + t.capacity, 0);
+      // Master keeps its order, or inherits from first slave that has one
+      const inheritedOrderId = masterTable.currentOrderId ||
+        otherTables.find(t => t.currentOrderId)?.currentOrderId;
       return prev.map(t => {
-        if (t.id === masterId) return { ...t, mergedWith: otherIds, capacity: totalCapacity, originalCapacity: t.originalCapacity || t.capacity };
-        if (otherIds.includes(t.id)) return { ...t, status: TableStatus.MERGED, masterTableId: masterId, originalCapacity: t.originalCapacity || t.capacity };
+        if (t.id === masterId) return {
+          ...t,
+          mergedWith: otherIds,
+          capacity: totalCapacity,
+          originalCapacity: t.originalCapacity || t.capacity,
+          status: inheritedOrderId ? TableStatus.OCCUPIED : t.status,
+          currentOrderId: inheritedOrderId
+        };
+        if (otherIds.includes(t.id)) return {
+          ...t,
+          status: TableStatus.MERGED,
+          masterTableId: masterId,
+          originalCapacity: t.originalCapacity || t.capacity,
+          currentOrderId: undefined
+        };
         return t;
       });
     });
