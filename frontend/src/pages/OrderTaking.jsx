@@ -25,12 +25,12 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
     }
   });
 
-  // Fetch menu items from backend
+  // Fetch menu items and existing order (if any)
   const fetchMenu = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/menu');
-      const backendMenu = response.data.map(item => ({
+      const [menuRes] = await Promise.all([api.get('/menu')]);
+      const backendMenu = menuRes.data.map(item => ({
         id: item._id,
         name: item.name,
         category: item.category,
@@ -39,6 +39,27 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
         description: item.description || ''
       }));
       setMenu(backendMenu);
+
+      // If table has an existing order, load items directly into cart
+      if (table.currentOrderId) {
+        try {
+          const orderRes = await api.get(`/orders/${table.currentOrderId}`);
+          const order = orderRes.data;
+          if (order && order.items) {
+            setCart(order.items.map(i => ({
+              id: `existing-${i.menuItem?._id || i.menuItem}`,
+              menuItemId: i.menuItem?._id || i.menuItem,
+              name: i.name,
+              quantity: i.quantity,
+              price: i.price,
+              status: i.status || 'PENDING',
+              isExisting: true
+            })));
+          }
+        } catch (e) {
+          console.error('Could not load existing order:', e);
+        }
+      }
     } catch (error) {
       console.error('Error fetching menu:', error);
       showMessage('error', 'Failed to load menu items');
@@ -73,7 +94,8 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
         name: item.name,
         quantity: 1,
         price: item.price,
-        status: OrderStatus.PENDING
+        status: OrderStatus.PENDING,
+        isExisting: false
       }];
     });
   };
@@ -97,28 +119,39 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
     try {
       setSubmitting(true);
       
-      // Prepare order data for backend
-      const orderData = {
-        tableId: table.id,
-        tableNumber: table.number,
-        items: cart.map(item => ({
-          menuItemId: item.menuItemId,
-          quantity: item.quantity,
-          specialInstructions: item.specialInstructions || ''
-        }))
-      };
-
-      // Create new order
-      const response = await api.post('/orders', orderData);
-      showMessage('success', 'Order submitted to kitchen!');
-      onSubmitOrder(response.data.order);
+      if (table.currentOrderId) {
+        // Update existing order with full cart (existing + new items)
+        const response = await api.put(`/orders/${table.currentOrderId}`, {
+          tableId: table.id,
+          tableNumber: table.number,
+          items: cart.map(item => ({
+            menuItemId: item.menuItemId,
+            quantity: item.quantity,
+            specialInstructions: item.specialInstructions || '',
+            status: item.status || 'PENDING'
+          }))
+        });
+        showMessage('success', 'Order updated!');
+        onSubmitOrder(response.data.order);
+      } else {
+        // Create new order
+        const response = await api.post('/orders', {
+          tableId: table.id,
+          tableNumber: table.number,
+          items: cart.map(item => ({
+            menuItemId: item.menuItemId,
+            quantity: item.quantity,
+            specialInstructions: item.specialInstructions || ''
+          }))
+        });
+        showMessage('success', 'Order submitted to kitchen!');
+        onSubmitOrder(response.data.order);
+      }
       
-      // Clear cart after successful submission
       setCart([]);
       
     } catch (error) {
       console.error('Error submitting order:', error);
-      console.error('Error response data:', error.response?.data);
       const errorMessage = error.response?.data?.message || 'Failed to submit order';
       showMessage('error', errorMessage);
     } finally {
@@ -206,10 +239,16 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
         <div className="w-full lg:w-[400px] flex flex-col bg-white rounded-[40px] shadow-2xl border border-gray-100 overflow-hidden">
           <div className="p-8 border-b border-gray-50 flex items-center gap-4">
             <ShoppingCart className="text-emerald-500" size={28} />
-            <h3 className="text-xl font-black text-[#022c22]">Cart Summary</h3>
+            <div>
+              <h3 className="text-xl font-black text-[#022c22]">Cart Summary</h3>
+              {table.currentOrderId && (
+                <p className="text-xs text-amber-600 font-bold mt-0.5">Adding to existing order</p>
+              )}
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto no-scrollbar p-6">
+            {/* Existing order items (read-only) */}
             {cart.length > 0 ? (
               <div className="space-y-4">
                 {cart.map(item => (
@@ -265,7 +304,7 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
               ) : (
                   <>
                   <Send size={18} />
-                  SUBMIT TO KITCHEN
+                  {table.currentOrderId ? 'ADD TO ORDER' : 'SUBMIT TO KITCHEN'}
                 </>
               )}
             </button>

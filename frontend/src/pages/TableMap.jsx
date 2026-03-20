@@ -103,8 +103,9 @@ const TableMap = ({ onSelectTable }) => {
             return { ...table, status: TableStatus.OCCUPIED, currentOrderId: order._id };
           }
           
-          // Only reset OCCUPIED tables to AVAILABLE (not RESERVED or split parents)
-          if (table.status === TableStatus.OCCUPIED && !table.isSplit) {
+          // Only reset OCCUPIED tables that were order-driven (have a currentOrderId) back to AVAILABLE
+          // Never reset manually-set OCCUPIED or RESERVED tables
+          if (table.status === TableStatus.OCCUPIED && !table.isSplit && table.currentOrderId) {
             return { ...table, status: TableStatus.AVAILABLE, currentOrderId: undefined };
           }
           return table;
