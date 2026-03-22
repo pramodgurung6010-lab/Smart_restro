@@ -54,17 +54,19 @@ const BillingAndPayment = ({ userRole }) => {
         subtotal: o.subtotal || 0,
         tax: o.tax || 0,
         total: o.total || 0,
+        isPaid: o.isPaid,
         createdAt: o.createdAt
       })));
 
-      // Build occupied tables from active orders
+      // Build tables from active orders (not cancelled, not paid)
       const occupiedTables = backendOrders
-        .filter(o => !['SERVED', 'CANCELLED', 'PAID'].includes(o.status))
+        .filter(o => o.status !== 'CANCELLED' && !o.isPaid)
         .map(o => ({
           id: o.tableId,
           number: o.tableNumber,
           status: TableStatus.OCCUPIED,
-          currentOrderId: o._id
+          currentOrderId: o._id,
+          orderStatus: o.status
         }));
       // Deduplicate by tableId
       const unique = occupiedTables.filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
@@ -150,6 +152,20 @@ const BillingAndPayment = ({ userRole }) => {
         setIsSuccess(true);
         setMessage({ type: 'success', text: 'Payment processed successfully!' });
         
+        // Free the table in localStorage so TableMap reflects it immediately
+        const paidTableId = currentTable?.id;
+        if (paidTableId) {
+          try {
+            const saved = JSON.parse(localStorage.getItem('tableMapState') || '[]');
+            const updated = saved.map(t => 
+              t.id === paidTableId 
+                ? { ...t, status: 'AVAILABLE', currentOrderId: undefined }
+                : t
+            );
+            localStorage.setItem('tableMapState', JSON.stringify(updated));
+          } catch (e) {}
+        }
+
         await fetchOrdersAndTables();
         
         setTimeout(() => {
@@ -234,7 +250,13 @@ const BillingAndPayment = ({ userRole }) => {
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <p className="font-black text-gray-900">Table {displayNumber}</p>
-                    <span className="text-[8px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">READY</span>
+                    <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md ${
+                      table.orderStatus === 'SERVED'
+                        ? 'text-blue-600 bg-blue-50'
+                        : 'text-emerald-600 bg-emerald-50'
+                    }`}>
+                      {table.orderStatus === 'SERVED' ? 'SERVED' : 'ACTIVE'}
+                    </span>
                   </div>
                   <p className="text-[11px] text-gray-400 font-bold uppercase mt-0.5">{order?.items.length} Items • Rs.{order?.total.toFixed(2)}</p>
                 </div>
@@ -421,13 +443,13 @@ const BillingAndPayment = ({ userRole }) => {
 
               <div className="p-10 bg-gray-50/50 border-t border-gray-100">
                 <button 
-                  disabled={!paymentMethod || loading}
+                  disabled={!paymentMethod || loading || currentOrder?.status !== 'SERVED'}
                   onClick={handlePay}
                   className={`w-full py-6 rounded-[32px] font-black text-lg transition-all shadow-xl active:scale-[0.98] ${
-                    paymentMethod && !loading ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    paymentMethod && !loading && currentOrder?.status === 'SERVED' ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  {loading ? 'PROCESSING...' : paymentMethod ? 'CONFIRM SETTLEMENT' : 'CHOOSE PAYMENT TO CONTINUE'}
+                  {loading ? 'PROCESSING...' : currentOrder?.status !== 'SERVED' ? 'ORDER NOT SERVED YET' : paymentMethod ? 'CONFIRM SETTLEMENT' : 'CHOOSE PAYMENT TO CONTINUE'}
                 </button>
               </div>
             </div>

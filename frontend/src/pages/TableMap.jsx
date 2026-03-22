@@ -93,18 +93,19 @@ const TableMap = ({ onSelectTable }) => {
           // Never touch merged slave tables
           if (table.status === TableStatus.MERGED) return table;
           
-          const hasActiveOrder = backendOrders.some(order => 
+          const activeOrder = backendOrders.find(order => 
             order.tableId === table.id && 
-            !['SERVED', 'CANCELLED', 'PAID'].includes(order.status)
+            !['SERVED', 'CANCELLED', 'PAID'].includes(order.status) &&
+            !order.isPaid
           );
           
-          if (hasActiveOrder) {
-            const order = backendOrders.find(o => o.tableId === table.id);
-            return { ...table, status: TableStatus.OCCUPIED, currentOrderId: order._id };
+          if (activeOrder) {
+            return { ...table, status: TableStatus.OCCUPIED, currentOrderId: activeOrder._id };
           }
           
-          // Only reset OCCUPIED tables that were order-driven (have a currentOrderId) back to AVAILABLE
-          // Never reset manually-set OCCUPIED or RESERVED tables
+          // Reset OCCUPIED tables that were order-driven back to AVAILABLE:
+          // - table has a currentOrderId (was order-driven), OR
+          // - table's currentOrderId points to a paid/served/missing order
           if (table.status === TableStatus.OCCUPIED && !table.isSplit && table.currentOrderId) {
             return { ...table, status: TableStatus.AVAILABLE, currentOrderId: undefined };
           }
