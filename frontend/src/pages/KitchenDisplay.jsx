@@ -110,8 +110,9 @@ const KitchenDisplay = ({ role }) => {
 
   const activeOrders = orders.filter(o => o.status !== 'SERVED' && o.status !== 'CANCELLED');
   
-  // Waiters are restricted from performing status updates
+  // Waiters can only mark orders as served (not update item statuses)
   const isReadOnly = role === UserRole.WAITER;
+  const isWaiter = role === UserRole.WAITER;
 
   const getItemStatusAction = (item) => {
     if (isReadOnly) return null;
@@ -154,7 +155,7 @@ const KitchenDisplay = ({ role }) => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Live Order Monitor</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {isReadOnly ? 'Viewing active orders in read-only mode' : 'Manage kitchen throughput and service readiness'}
+            {isReadOnly ? 'Mark orders as served once all items are ready' : 'Manage kitchen throughput and service readiness'}
           </p>
         </div>
         <div className="flex items-center gap-4 bg-white p-2 px-4 rounded-xl border border-gray-200 shadow-sm">
@@ -282,7 +283,7 @@ const KitchenDisplay = ({ role }) => {
                     </span>
                   </div>
                   
-                  {!isReadOnly && isAllReady && (
+                  {(!isReadOnly || isWaiter) && isAllReady && (
                     <button 
                       onClick={() => handleUpdateOrderStatus(order.id, 'SERVED')}
                       className="px-4 py-2 bg-emerald-600 text-white text-[11px] font-black rounded-xl hover:bg-emerald-700 shadow-md transition-all active:scale-95 flex items-center gap-2"
