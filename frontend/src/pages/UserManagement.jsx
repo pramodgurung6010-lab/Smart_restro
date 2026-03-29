@@ -79,26 +79,11 @@ const UserManagement = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        if (response.data.emailSent) {
-          setEmailStatus(`✅ User created and credentials sent via email!
-          
-🔐 Generated Password: ${response.data.generatedPassword}
-(Backup - user will receive this via email)`);
-        } else if (response.data.manualCredentials) {
+        if (response.data.manualCredentials) {
           const creds = response.data.manualCredentials;
-          setEmailStatus(`⚠️ User created successfully! Email not configured - Please share these credentials manually:
-          
-📋 Login Details:
-• Username: ${creds.username}
-• Password: ${creds.password}
-• Role: ${creds.role}
-
-🔐 Auto-generated secure password for better security!`);
+          setEmailStatus(`⚠️ User created! Email could not be sent — share credentials manually:\n\nUsername: ${creds.username}\nPassword: ${creds.password}\nRole: ${creds.role}`);
         } else {
-          setEmailStatus(`⚠️ User created but email sending failed. 
-          
-🔐 Generated Password: ${response.data.generatedPassword}
-Please share these credentials manually.`);
+          setEmailStatus(`✅ User created and credentials sent to ${formData.email}!`);
         }
       }
 
@@ -179,12 +164,12 @@ Please share these credentials manually.`);
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Staff Management</h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">Register and manage restaurant personnel</p>
+          <h1 className="text-2xl font-bold text-gray-900">Staff Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Register and manage restaurant personnel</p>
         </div>
         <button 
           onClick={openNewUserModal} 
-          className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-black shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95"
+          className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95"
         >
           <Plus size={18} /> REGISTER NEW STAFF
         </button>
@@ -206,7 +191,7 @@ Please share these credentials manually.`);
 
       <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
         <table className="w-full text-left border-collapse">
-          <thead className="bg-gray-50/30 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+          <thead className="bg-gray-50/30 text-xs font-bold text-gray-400 uppercase tracking-widest">
             <tr>
               <th className="px-8 py-5">Name & Role</th>
               <th className="px-8 py-5">Contact</th>
@@ -225,7 +210,7 @@ Please share these credentials manually.`);
                     </div>
                     <div>
                       <p className="font-bold text-gray-900 leading-tight">{user.name || user.username}</p>
-                      <span className="text-[10px] font-black uppercase text-emerald-500 tracking-widest mt-1 inline-block">{user.role}</span>
+                      <span className="text-xs font-bold uppercase text-emerald-500 tracking-widest mt-1 inline-block">{user.role}</span>
                     </div>
                   </div>
                 </td>
@@ -234,14 +219,14 @@ Please share these credentials manually.`);
                     <Mail size={12} className="text-gray-300" /> 
                     {user.email || '—'}
                   </p>
-                  <p className="flex items-center gap-2 mt-1 font-black text-gray-900">
+                  <p className="flex items-center gap-2 mt-1 font-bold text-gray-900">
                     <Phone size={12} className="text-emerald-500" /> 
                     {user.phoneNumber || '—'}
                   </p>
                 </td>
                 <td className="px-8 py-5 font-mono text-sm text-gray-400 font-bold">@{user.username}</td>
                 <td className="px-8 py-5">
-                  <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
+                  <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full ${
                     user.isActive 
                       ? 'bg-green-100 text-green-700' 
                       : 'bg-red-100 text-red-700'
@@ -273,23 +258,23 @@ Please share these credentials manually.`);
         <div className="fixed inset-0 bg-[#022c22]/20 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <form onSubmit={handleSubmit} className="bg-white rounded-[40px] shadow-2xl p-10 max-w-md w-full space-y-6 animate-in zoom-in-95 duration-200">
             <div>
-              <h3 className="text-2xl font-black text-gray-900 tracking-tight">
+              <h3 className="text-2xl font-bold text-gray-900">
                 {editingUser ? 'Update Staff Member' : 'Register New Staff'}
               </h3>
-              <p className="text-gray-400 font-medium text-sm">
+              <p className="text-sm text-gray-500 mt-1">
                 {editingUser ? 'Update staff information' : 'Secure password will be auto-generated and emailed'}
               </p>
             </div>
             
             {error && (
-              <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-[10px] font-black uppercase rounded-xl">
+              <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-xs font-bold uppercase rounded-xl">
                 {error}
               </div>
             )}
             
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                   <User size={12} /> Full Name
                 </label>
                 <input 
@@ -303,7 +288,7 @@ Please share these credentials manually.`);
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                     @ Username
                   </label>
                   <input 
@@ -315,7 +300,7 @@ Please share these credentials manually.`);
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                     <ShieldCheck size={12} /> Role
                   </label>
                   <select 
@@ -331,7 +316,7 @@ Please share these credentials manually.`);
               </div>
               
               <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                   <Mail size={12} /> Email
                 </label>
                 <input 
@@ -344,14 +329,14 @@ Please share these credentials manually.`);
               </div>
               
               <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                   <Phone size={12} /> Phone Number
                 </label>
                 <input 
                   type="tel" 
                   value={formData.phoneNumber} 
                   onChange={e => setFormData({...formData, phoneNumber: e.target.value})} 
-                  className="w-full mt-1.5 px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-black" 
+                  className="w-full mt-1.5 px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-bold" 
                   placeholder="+1 (555) 000-0000" 
                 />
               </div>
@@ -361,14 +346,14 @@ Please share these credentials manually.`);
               <button 
                 type="button" 
                 onClick={() => setShowModal(false)} 
-                className="flex-1 py-4 bg-gray-100 text-gray-500 font-black rounded-2xl text-xs uppercase tracking-widest"
+                className="flex-1 py-4 bg-gray-100 text-gray-500 font-bold rounded-2xl text-xs uppercase tracking-widest"
                 disabled={loading}
               >
                 Cancel
               </button>
               <button 
                 type="submit" 
-                className="flex-[2] py-4 bg-emerald-600 text-white font-black rounded-2xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 active:scale-95 transition-all text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-[2] py-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 active:scale-95 transition-all text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 disabled={loading}
               >
                 {loading ? (
