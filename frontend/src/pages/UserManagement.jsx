@@ -310,7 +310,6 @@ const UserManagement = () => {
                   >
                     <option value={UserRole.WAITER}>Waiter</option>
                     <option value={UserRole.KITCHEN}>Kitchen</option>
-                    <option value={UserRole.ADMIN}>Admin</option>
                   </select>
                 </div>
               </div>
