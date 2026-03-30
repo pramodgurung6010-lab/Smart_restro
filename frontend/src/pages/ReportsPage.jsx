@@ -107,13 +107,8 @@ const ReportsPage = () => {
       <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
           <div className="space-y-1">
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-              <div className="p-3 bg-emerald-100 text-emerald-600 rounded-2xl">
-                <TrendingUp size={24} />
-              </div>
-              Analytics Hub
-            </h1>
-            <p className="text-sm text-gray-500 font-medium">Detailed financial performance and trend analysis</p>
+            <h1 className="text-2xl font-bold text-gray-900">Analytics Hub</h1>
+            <p className="text-sm text-gray-500 mt-1">Detailed financial performance and trend analysis</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -218,15 +213,15 @@ const ReportsPage = () => {
               <div className={`${kpi.bg} ${kpi.color} p-3 rounded-2xl`}>{kpi.icon}</div>
               <span className="text-[10px] font-black px-2 py-1 rounded-full bg-gray-50 text-gray-400 uppercase tracking-tighter">{kpi.trend}</span>
             </div>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{kpi.label}</p>
-            <h4 className="text-2xl font-black text-gray-900">{kpi.value}</h4>
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">{kpi.label}</p>
+            <h4 className="text-2xl font-bold text-gray-900">{kpi.value}</h4>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white p-8 rounded-[40px] shadow-sm border border-gray-100">
-          <h3 className="text-xl font-black text-gray-900 mb-6">Revenue Performance</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-6">Revenue Performance</h3>
           {filteredOrders.length === 0 ? (
             <div className="flex items-center justify-center h-48 text-gray-400 text-sm">No orders in selected date range</div>
           ) : (
@@ -242,7 +237,7 @@ const ReportsPage = () => {
                 const maxVal = Math.max(...days.map(([,v]) => v), 1);
                 return days.map(([day, val]) => (
                   <div key={day} className="flex items-center gap-3">
-                    <span className="text-[10px] font-black text-gray-400 w-16 shrink-0">{day}</span>
+                    <span className="text-xs font-black text-gray-400 w-16 shrink-0">{day}</span>
                     <div className="flex-1 bg-gray-50 rounded-full h-6 overflow-hidden">
                       <div 
                         className="h-full bg-emerald-500 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
@@ -258,18 +253,18 @@ const ReportsPage = () => {
           )}
           <div className="mt-6 grid grid-cols-2 gap-4">
             <div className="bg-emerald-50 rounded-2xl p-4">
-              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Total Revenue</p>
-              <p className="text-xl font-black text-emerald-800">Rs.{stats.totalRevenue.toFixed(2)}</p>
+              <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Total Revenue</p>
+              <p className="text-xl font-bold text-emerald-800">Rs.{stats.totalRevenue.toFixed(2)}</p>
             </div>
             <div className="bg-gray-50 rounded-2xl p-4">
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Avg Order Value</p>
-              <p className="text-xl font-black text-gray-800">Rs.{stats.aov.toFixed(2)}</p>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Avg Order Value</p>
+              <p className="text-xl font-bold text-gray-800">Rs.{stats.aov.toFixed(2)}</p>
             </div>
           </div>
         </div>
 
         <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 flex flex-col">
-          <h3 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2">
+          <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <HistoryIcon size={20} className="text-emerald-600" /> Export Log
           </h3>
           <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar">
@@ -295,7 +290,7 @@ const ReportsPage = () => {
       {/* Audit Trail Table */}
       <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-8 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4">
-          <h3 className="text-xl font-black text-gray-900">Historical Log</h3>
+          <h3 className="text-xl font-bold text-gray-900">Historical Log</h3>
           <div className="flex items-center gap-3">
             {/* Settlement filter */}
             <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100">
@@ -336,12 +331,12 @@ const ReportsPage = () => {
                   .filter(o => settlementFilter === 'ALL' || (settlementFilter === 'SETTLED' ? o.isPaid : !o.isPaid));
                 return display.length > 0 ? display.map((order) => (
                   <tr key={order.id} className="hover:bg-emerald-50/20 transition-colors group">
-                    <td className="px-10 py-5 font-black text-gray-900">#ORD-{order.id.slice(-6).toUpperCase()}</td>
-                    <td className="px-10 py-5 text-gray-400 font-mono text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>
-                    <td className="px-10 py-5 text-gray-500 font-bold">{order.waiterId}</td>
-                    <td className="px-10 py-5 font-black text-gray-900">Rs.{order.total.toFixed(2)}</td>
+                    <td className="px-10 py-5 font-bold text-gray-900">#ORD-{order.id.slice(-6).toUpperCase()}</td>
+                    <td className="px-10 py-5 text-gray-400 text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>
+                    <td className="px-10 py-5 text-gray-500">{order.waiterId}</td>
+                    <td className="px-10 py-5 font-bold text-gray-900">Rs.{order.total.toFixed(2)}</td>
                     <td className="px-10 py-5 text-right">
-                      <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${order.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
+                      <span className={`px-4 py-1.5 rounded-xl text-xs font-bold uppercase tracking-widest ${order.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
                         {order.isPaid ? 'Settled' : 'Unpaid'}
                       </span>
                     </td>
