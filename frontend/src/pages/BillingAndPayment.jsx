@@ -205,8 +205,8 @@ const BillingAndPayment = ({ userRole }) => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Billing Center</h1>
-          <p className="text-[13px] text-gray-400 font-medium">Manage settlements and history</p>
+          <h1 className="text-2xl font-bold text-gray-900">Billing Center</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage settlements and history</p>
         </div>
         <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
           <button 
@@ -286,11 +286,11 @@ const BillingAndPayment = ({ userRole }) => {
                       <Receipt size={32} />
                     </div>
                     <div>
-                      <h2 className="text-3xl font-black text-gray-900">Billing Preview</h2>
+                      <h2 className="text-2xl font-bold text-gray-900">Billing Preview</h2>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] font-black uppercase text-emerald-600 tracking-widest">Table {currentTable?.number}</span>
+                        <span className="text-xs font-bold uppercase text-emerald-600 tracking-widest">Table {currentTable?.number}</span>
                         <span className="text-gray-200 text-xs">•</span>
-                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Order #{currentOrder.id.slice(-6).toUpperCase()}</span>
+                        <span className="text-xs font-bold uppercase text-gray-400 tracking-widest">Order #{currentOrder.id.slice(-6).toUpperCase()}</span>
                       </div>
                     </div>
                   </div>
@@ -302,7 +302,7 @@ const BillingAndPayment = ({ userRole }) => {
                 </div>
 
                 <div className="space-y-6">
-                  <div className="grid grid-cols-12 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-4">
+                  <div className="grid grid-cols-12 text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 pb-4">
                     <div className="col-span-6">Description</div>
                     <div className="col-span-2 text-center">Qty</div>
                     <div className="col-span-2 text-right">Price</div>
@@ -343,7 +343,7 @@ const BillingAndPayment = ({ userRole }) => {
                               <span className="text-gray-400 font-mono">Rs.{displayPrice.toFixed(2)}</span>
                             )}
                           </div>
-                          <div className="col-span-2 text-right font-black text-gray-900 font-mono">
+                          <div className="col-span-2 text-right font-bold text-gray-900 font-mono">
                             Rs.{(displayPrice * displayQuantity).toFixed(2)}
                           </div>
                         </div>
@@ -402,10 +402,10 @@ const BillingAndPayment = ({ userRole }) => {
 
                 <div className="flex gap-8 items-end relative">
                   <div className="flex-1 space-y-4">
-                    <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Payment Method</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Payment Method</p>
                     <div className="flex justify-center">
                       <button onClick={() => setPaymentMethod('CASH')} className={`p-8 rounded-[32px] border-2 transition-all flex flex-col items-center gap-3 w-64 ${paymentMethod === 'CASH' ? 'border-emerald-500 bg-emerald-50/20 ring-4 ring-emerald-50 text-emerald-700' : 'bg-white border-gray-50 text-gray-400 hover:border-emerald-200'}`}>
-                        <Banknote size={40} /><span className="text-[11px] font-black uppercase tracking-widest">Cash Payment</span>
+                        <Banknote size={40} /><span className="text-xs font-bold uppercase tracking-widest">Cash Payment</span>
                       </button>
                     </div>
                   </div>
@@ -418,20 +418,20 @@ const BillingAndPayment = ({ userRole }) => {
                         const { subtotal, tax, service, discountAmount, total } = calculateTotals(orderTotal);
                         return (
                           <>
-                            <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest"><span>Subtotal</span><span>Rs.{subtotal.toFixed(2)}</span></div>
-                            <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest"><span>Gov Tax (5%)</span><span>Rs.{tax.toFixed(2)}</span></div>
-                            <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest"><span>Service (10%)</span><span>₹{service.toFixed(2)}</span></div>
+                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest"><span>Subtotal</span><span>Rs.{subtotal.toFixed(2)}</span></div>
+                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest"><span>Gov Tax (5%)</span><span>Rs.{tax.toFixed(2)}</span></div>
+                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest"><span>Service (10%)</span><span>Rs.{service.toFixed(2)}</span></div>
                             {discountAmount > 0 && (
-                              <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest text-emerald-400">
+                              <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-emerald-400">
                                 <span>Discount</span><span>-Rs.{discountAmount.toFixed(2)}</span>
                               </div>
                             )}
-                            <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest pb-4 border-b border-white/10">
+                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest pb-4 border-b border-white/10">
                               <span>Subtotal + Tax/Service</span><span>Rs.{(subtotal + tax + service).toFixed(2)}</span>
                             </div>
                             <div className="pt-2 opacity-100">
-                              <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-emerald-400">Total Payable</p>
-                              <p className="text-5xl font-black tracking-tighter">Rs.{total.toFixed(2)}</p>
+                              <p className="text-xs font-bold uppercase tracking-widest mb-1 text-emerald-400">Total Payable</p>
+                              <p className="text-5xl font-bold tracking-tight">Rs.{total.toFixed(2)}</p>
                             </div>
                           </>
                         );
@@ -445,7 +445,7 @@ const BillingAndPayment = ({ userRole }) => {
                 <button 
                   disabled={!paymentMethod || loading || currentOrder?.status !== 'SERVED'}
                   onClick={handlePay}
-                  className={`w-full py-6 rounded-[32px] font-black text-lg transition-all shadow-xl active:scale-[0.98] ${
+                  className={`w-full py-6 rounded-[32px] font-bold text-lg transition-all shadow-xl active:scale-[0.98] ${
                     paymentMethod && !loading && currentOrder?.status === 'SERVED' ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   }`}
                 >
