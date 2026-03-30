@@ -22,9 +22,9 @@ const AdminDashboard = () => {
   });
 
   // Fetch dashboard data
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       
       // Fetch orders
       const ordersResponse = await api.get('/orders');
@@ -61,13 +61,13 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 10000);
+    fetchDashboardData(true);
+    const interval = setInterval(() => fetchDashboardData(false), 10000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
