@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Save, UserCircle, Key, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -8,6 +8,27 @@ const ProfileSettings = ({ user, onUpdate }) => {
     email: user.email || '', 
     phoneNumber: user.phoneNumber || '' 
   });
+
+  // Fetch full profile from backend on mount to get phoneNumber
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:5002/api/auth/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const p = response.data;
+        setFormData({
+          name: p.name || p.username,
+          email: p.email || '',
+          phoneNumber: p.phoneNumber || ''
+        });
+      } catch (e) {
+        console.error('Failed to load profile:', e);
+      }
+    };
+    fetchProfile();
+  }, []);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -35,8 +56,10 @@ const ProfileSettings = ({ user, onUpdate }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Update user in parent component
-      onUpdate(response.data.user);
+      // Update user in parent component and localStorage
+      const updatedUser = { ...user, ...response.data.user };
+      onUpdate(updatedUser);
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
       
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -97,14 +120,14 @@ const ProfileSettings = ({ user, onUpdate }) => {
         <div className="inline-flex items-center justify-center w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full border-4 border-white shadow-lg">
           <UserCircle size={48} />
         </div>
-        <h1 className="text-3xl font-black text-gray-900">Account Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
         <p className="text-gray-500">Maintain your security credentials and contact info</p>
       </div>
 
       {/* Profile Information Form */}
       <form onSubmit={handleProfileSubmit} className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
         <div className="p-8 space-y-6">
-          <h2 className="text-xl font-black text-gray-900">Profile Information</h2>
+          <h2 className="text-xl font-bold text-gray-900">Profile Information</h2>
           
           {error && (
             <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl flex items-center gap-2">
@@ -115,7 +138,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Display Name</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Display Name</label>
               <input 
                 type="text" 
                 value={formData.name} 
@@ -124,7 +147,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Username (Permanent)</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Username (Permanent)</label>
               <input 
                 type="text" 
                 value={`@${user.username}`} 
@@ -133,7 +156,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Email Address</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Email Address</label>
               <input 
                 type="email" 
                 value={formData.email} 
@@ -142,7 +165,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Phone Number</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Phone Number</label>
               <input 
                 type="tel" 
                 value={formData.phoneNumber} 
@@ -166,7 +189,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
           </p>
           <button 
             type="submit" 
-            className="flex items-center gap-2 px-8 py-3 bg-emerald-600 text-white font-black rounded-xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-8 py-3 bg-emerald-600 text-white font-bold rounded-xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading}
           >
             {loading ? (
@@ -187,7 +210,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
       {/* Password Change Form */}
       <form onSubmit={handlePasswordSubmit} className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
         <div className="p-8 space-y-6">
-          <div className="flex items-center gap-2 text-emerald-600 font-black text-sm uppercase tracking-widest">
+          <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm uppercase tracking-widest">
             <Key size={16} />
             Change Password
           </div>
@@ -208,7 +231,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Current Password</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Current Password</label>
               <input 
                 type="password" 
                 value={passwordData.currentPassword}
@@ -219,7 +242,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">New Password</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">New Password</label>
               <input 
                 type="password" 
                 value={passwordData.newPassword}
@@ -232,7 +255,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
               <p className="text-[10px] text-gray-400">Minimum 6 characters required</p>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Confirm New Password</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Confirm New Password</label>
               <input 
                 type="password" 
                 value={passwordData.confirmPassword}
@@ -248,7 +271,7 @@ const ProfileSettings = ({ user, onUpdate }) => {
         <div className="px-8 py-6 bg-gray-50 border-t border-gray-100 flex items-center justify-end">
           <button 
             type="submit" 
-            className="flex items-center gap-2 px-8 py-3 bg-red-600 text-white font-black rounded-xl shadow-xl shadow-red-100 hover:bg-red-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-8 py-3 bg-red-600 text-white font-bold rounded-xl shadow-xl shadow-red-100 hover:bg-red-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={passwordLoading}
           >
             {passwordLoading ? (

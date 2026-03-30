@@ -182,7 +182,7 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
           </div>
           Exit Order
         </button>
-        <div className="bg-emerald-600 text-white px-6 py-2 rounded-2xl text-lg font-black shadow-lg shadow-emerald-100">
+        <div className="bg-emerald-600 text-white px-6 py-2 rounded-2xl text-lg font-bold shadow-lg shadow-emerald-100">
           Table {table.number}
         </div>
       </div>
@@ -203,7 +203,7 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-6 py-2.5 text-xs font-black rounded-xl whitespace-nowrap transition-all ${
+                className={`px-6 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap transition-all ${
                   activeCategory === cat 
                     ? 'bg-emerald-600 text-white shadow-lg' 
                     : 'bg-white text-gray-400 border border-gray-100 hover:border-emerald-200'
@@ -223,10 +223,10 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
                   className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all text-left flex flex-col justify-between h-48 group"
                 >
                   <div className="flex justify-between items-start">
-                    <h4 className="text-lg font-black text-gray-800 leading-tight pr-4">{item.name}</h4>
-                    <span className="text-lg font-black text-emerald-600 font-mono shrink-0">Rs.{item.price.toFixed(2)}</span>
+                    <h4 className="text-lg font-bold text-gray-800 leading-tight pr-4">{item.name}</h4>
+                    <span className="text-lg font-bold text-emerald-600 font-mono shrink-0">Rs.{item.price.toFixed(2)}</span>
                   </div>
-                  <div className="mt-4 inline-flex items-center gap-2 text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all">
+                  <div className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all">
                     <Plus size={14} /> ADD ITEM
                   </div>
                 </button>
@@ -240,7 +240,7 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
           <div className="p-8 border-b border-gray-50 flex items-center gap-4">
             <ShoppingCart className="text-emerald-500" size={28} />
             <div>
-              <h3 className="text-xl font-black text-[#022c22]">Cart Summary</h3>
+              <h3 className="text-xl font-bold text-[#022c22]">Cart Summary</h3>
               {table.currentOrderId && (
                 <p className="text-xs text-amber-600 font-bold mt-0.5">Adding to existing order</p>
               )}
@@ -255,11 +255,11 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
                   <div key={item.id} className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-3xl border border-gray-50">
                     <div className="flex-1">
                       <p className="font-bold text-gray-800 text-sm leading-tight">{item.name}</p>
-                      <p className="text-xs text-emerald-600 font-black font-mono mt-1">Rs.{item.price.toFixed(2)}</p>
+                      <p className="text-xs text-emerald-600 font-bold font-mono mt-1">Rs.{item.price.toFixed(2)}</p>
                     </div>
                     <div className="flex items-center gap-3 bg-white rounded-2xl p-1 border border-gray-100 shadow-sm">
                       <button onClick={() => updateQuantity(item.menuItemId, -1)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Minus size={14}/></button>
-                      <span className="text-sm font-black w-4 text-center">{item.quantity}</span>
+                      <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
                       <button onClick={() => updateQuantity(item.menuItemId, 1)} className="p-1.5 text-gray-400 hover:text-emerald-600 transition-colors"><Plus size={14}/></button>
                     </div>
                   </div>
@@ -278,19 +278,19 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
           <div className="bg-[#022c22] p-8 space-y-8">
             <div className="flex justify-between items-end border-b border-white/10 pb-6">
               <div>
-                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-2">Net Subtotal</span>
-                <span className="text-4xl font-black text-white font-mono tracking-tighter">Rs.{subtotal.toFixed(2)}</span>
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest block mb-2">Net Subtotal</span>
+                <span className="text-4xl font-bold text-white font-mono tracking-tighter">Rs.{subtotal.toFixed(2)}</span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-2">Items Count</span>
-                <span className="text-2xl font-black text-white font-mono">{itemsCount}</span>
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest block mb-2">Items Count</span>
+                <span className="text-2xl font-bold text-white font-mono">{itemsCount}</span>
               </div>
             </div>
             
             <button 
               disabled={cart.length === 0 || submitting}
               onClick={handleSubmit}
-              className={`w-full py-5 rounded-[24px] font-black text-sm flex items-center justify-center gap-3 transition-all ${
+              className={`w-full py-5 rounded-[24px] font-bold text-sm flex items-center justify-center gap-3 transition-all ${
                 cart.length > 0 && !submitting
                   ? 'bg-emerald-500 text-[#022c22] hover:bg-emerald-400 shadow-xl shadow-emerald-950/20 active:scale-[0.98]' 
                   : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/10'
