@@ -153,7 +153,7 @@ const KitchenDisplay = ({ role }) => {
 
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Live Order Monitor</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Live Order Monitor</h1>
           <p className="text-sm text-gray-500 mt-1">
             {isReadOnly ? 'Mark orders as served once all items are ready' : 'Manage kitchen throughput and service readiness'}
           </p>
@@ -200,7 +200,7 @@ const KitchenDisplay = ({ role }) => {
               <div className="p-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-black text-gray-900 whitespace-nowrap">Table {order.tableNumber}</h3>
+                    <h3 className="text-xl font-bold text-gray-900 whitespace-nowrap">Table {order.tableNumber}</h3>
                     <div className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-0.5 rounded-lg text-[10px] font-black shadow-sm">
                       <ShoppingBasket size={12} />
                       {totalItemsCount} Items
