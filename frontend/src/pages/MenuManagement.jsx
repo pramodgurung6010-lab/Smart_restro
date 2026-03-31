@@ -158,12 +158,12 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Menu Management</h1>
-          <p className="text-sm text-gray-500 font-medium">Create and refine your culinary offerings</p>
+          <h1 className="text-2xl font-bold text-gray-900">Menu Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Create and refine your culinary offerings</p>
         </div>
         <button 
           onClick={handleOpenAdd}
-          className="inline-flex items-center px-6 py-3 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 active:scale-95"
+          className="inline-flex items-center px-6 py-3 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 active:scale-95"
         >
           <Plus size={20} className="mr-2" />
           ADD NEW DISH
@@ -202,7 +202,7 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-gray-50/20 text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] border-b border-gray-100">
+              <tr className="bg-gray-50/20 text-gray-400 text-xs font-bold uppercase tracking-[0.2em] border-b border-gray-100">
                 <th className="px-8 py-5">Dish Details</th>
                 <th className="px-8 py-5">Category</th>
                 <th className="px-8 py-5">Price</th>
@@ -227,17 +227,17 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
                     </div>
                   </td>
                   <td className="px-8 py-5">
-                    <span className="px-3 py-1 rounded-xl bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                    <span className="px-3 py-1 rounded-xl bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-widest">
                       {item.category}
                     </span>
                   </td>
                   <td className="px-8 py-5">
-                    <span className="font-mono font-black text-gray-900 text-lg">Rs.{item.price.toFixed(2)}</span>
+                    <span className="font-mono font-bold text-gray-900 text-lg">Rs.{item.price.toFixed(2)}</span>
                   </td>
                   <td className="px-8 py-5">
                     <button 
                       onClick={() => toggleAvailability(item)}
-                      className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                      className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
                         item.available 
                           ? 'bg-emerald-100 text-emerald-700' 
                           : 'bg-red-50 text-red-600 opacity-60 hover:opacity-100'
@@ -275,10 +275,10 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
           <div className="bg-white rounded-[40px] shadow-2xl p-10 max-w-lg w-full animate-in zoom-in-95 duration-300">
             <div className="flex justify-between items-center mb-8">
               <div>
-                <h3 className="text-3xl font-black text-gray-900 tracking-tight">
+                <h3 className="text-2xl font-bold text-gray-900">
                   {editingItem ? 'Edit Dish' : 'Create New Dish'}
                 </h3>
-                <p className="text-gray-400 font-medium text-sm">Fill in the details for your menu item</p>
+                <p className="text-sm text-gray-500 mt-1">Fill in the details for your menu item</p>
               </div>
               <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors">
                 <X size={24} />
@@ -287,7 +287,7 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                   <Info size={12} /> Dish Name
                 </label>
                 <input 
@@ -302,7 +302,7 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
 
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                     <Tag size={12} /> Category
                   </label>
                   <select 
@@ -316,7 +316,7 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                     <DollarSign size={12} /> Price
                   </label>
                   <input 
@@ -324,14 +324,14 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
                     step="0.01"
                     value={formData.price} 
                     onChange={e => setFormData({...formData, price: parseFloat(e.target.value)})}
-                    className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-mono font-black"
+                    className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-mono font-bold"
                     required 
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                   <FileText size={12} /> Description
                 </label>
                 <textarea 
@@ -346,13 +346,13 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
                 <button 
                   type="button" 
                   onClick={() => setShowModal(false)} 
-                  className="flex-1 py-4 bg-gray-100 text-gray-500 font-black rounded-2xl hover:bg-gray-200 transition-all text-xs uppercase tracking-widest"
+                  className="flex-1 py-4 bg-gray-100 text-gray-500 font-bold rounded-2xl hover:bg-gray-200 transition-all text-xs uppercase tracking-widest"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-[2] py-4 bg-emerald-600 text-white font-black rounded-2xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all text-xs uppercase tracking-widest active:scale-95"
+                  className="flex-[2] py-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all text-xs uppercase tracking-widest active:scale-95"
                 >
                   {editingItem ? 'UPDATE DISH' : 'CONFIRM DISH'}
                 </button>
