@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Download, TrendingUp, Calendar, FileText, History as HistoryIcon, ArrowRight } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const ReportsPage = () => {
   const [orders, setOrders] = useState([]);
@@ -68,7 +68,7 @@ const ReportsPage = () => {
     const doc = new jsPDF();
     doc.setFontSize(22);
     doc.setTextColor(16, 185, 129);
-    doc.text('EmeraldDine RMS - Sales Report', 14, 20);
+    doc.text('Smart Restro - Sales Report', 14, 20);
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Period: ${startDate} to ${endDate}`, 14, 28);
@@ -84,8 +84,8 @@ const ReportsPage = () => {
       `Rs.${order.total.toFixed(2)}`,
       order.isPaid ? 'PAID' : 'PENDING'
     ]);
-    doc.autoTable({ startY: 65, head: [['Order ID', 'Waiter', 'Date', 'Amount', 'Status']], body: tableData, headStyles: { fillColor: [16, 185, 129] } });
-    doc.save(`EmeraldDine_Report_${startDate}_${endDate}.pdf`);
+    autoTable(doc, { startY: 65, head: [['Order ID', 'Waiter', 'Date', 'Amount', 'Status']], body: tableData, headStyles: { fillColor: [16, 185, 129] } });
+    doc.save(`SmartRestro_Report_${startDate}_${endDate}.pdf`);
     addToHistory('PDF');
   };
 
@@ -159,7 +159,7 @@ const ReportsPage = () => {
 
             <button 
               onClick={handleExportPDF}
-              className="flex items-center gap-2 px-8 py-3.5 bg-emerald-600 text-white rounded-full text-[11px] font-black hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 uppercase tracking-widest active:scale-95"
+              className="flex items-center gap-2 px-8 py-3.5 bg-emerald-600 text-white rounded-full text-xs font-bold hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 uppercase tracking-widest active:scale-95"
             >
               <Download size={16} />
               Generate PDF
