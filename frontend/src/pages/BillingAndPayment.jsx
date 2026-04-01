@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { TableStatus } from '../types';
 import { 
   Receipt, 
   Banknote, 
-  Printer, 
   CheckCircle, 
   Clock, 
   Download,
@@ -190,6 +191,110 @@ const BillingAndPayment = ({ userRole }) => {
     }
   };
 
+  const downloadSlip = () => {
+    if (!currentOrder || !currentTable) return;
+    const doc = new jsPDF({ unit: 'mm', format: [80, 200] });
+    const orderSubtotal = isEditingBill ? getEditedOrderTotal() : currentOrder.subtotal || currentOrder.total;
+    const { subtotal, tax, service, discountAmount, total } = calculateTotals(orderSubtotal);
+
+    let y = 10;
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Smart Restro', 40, y, { align: 'center' });
+    y += 6;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Restaurant Management System', 40, y, { align: 'center' });
+    y += 8;
+    doc.setLineWidth(0.3);
+    doc.line(5, y, 75, y);
+    y += 5;
+    doc.setFontSize(8);
+    doc.text(`Table: ${currentTable.number}`, 5, y);
+    doc.text(`Order: #${currentOrder.id.slice(-6).toUpperCase()}`, 75, y, { align: 'right' });
+    y += 5;
+    doc.text(`Date: ${new Date().toLocaleString()}`, 5, y);
+    y += 5;
+    doc.line(5, y, 75, y);
+    y += 3;
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Item', 'Qty', 'Price', 'Total']],
+      body: currentOrder.items.map(item => [
+        item.name, item.quantity,
+        `Rs.${item.price.toFixed(2)}`,
+        `Rs.${(item.price * item.quantity).toFixed(2)}`
+      ]),
+      styles: { fontSize: 7, cellPadding: 1.5 },
+      headStyles: { fillColor: [5, 150, 105], fontSize: 7 },
+      columnStyles: { 0: { cellWidth: 28 }, 1: { cellWidth: 8 }, 2: { cellWidth: 18 }, 3: { cellWidth: 18 } },
+      margin: { left: 5, right: 5 },
+      tableWidth: 70,
+    });
+
+    y = doc.lastAutoTable.finalY + 5;
+    doc.line(5, y, 75, y);
+    y += 5;
+
+    const row = (label, value, bold = false) => {
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      doc.setFontSize(bold ? 9 : 7);
+      doc.text(label, 5, y);
+      doc.text(value, 75, y, { align: 'right' });
+      y += 5;
+    };
+
+    row('Subtotal:', `Rs.${subtotal.toFixed(2)}`);
+    row('Gov Tax (5%):', `Rs.${tax.toFixed(2)}`);
+    row('Service (10%):', `Rs.${service.toFixed(2)}`);
+    if (discountAmount > 0) row('Discount:', `-Rs.${discountAmount.toFixed(2)}`);
+    doc.line(5, y, 75, y); y += 4;
+    row('TOTAL PAYABLE:', `Rs.${total.toFixed(2)}`, true);
+    y += 4;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.text('Thank you for dining with us!', 40, y, { align: 'center' });
+
+    doc.save(`Bill_Table${currentTable.number}_${Date.now()}.pdf`);
+  };
+
+  const printSlip = () => {
+    if (!currentOrder || !currentTable) return;
+    const orderSubtotal = isEditingBill ? getEditedOrderTotal() : currentOrder.subtotal || currentOrder.total;
+    const { subtotal, tax, service, discountAmount, total } = calculateTotals(orderSubtotal);
+    const win = window.open('', '_blank');
+    win.document.write(`<html><head><title>Bill - Table ${currentTable.number}</title>
+      <style>
+        body{font-family:monospace;width:280px;margin:0 auto;font-size:12px}
+        h2{text-align:center;margin:4px 0;font-size:16px}
+        p{text-align:center;margin:2px 0;font-size:11px}
+        hr{border:1px dashed #000}
+        table{width:100%;border-collapse:collapse;font-size:11px}
+        th{text-align:left;border-bottom:1px solid #000;padding:2px 0}
+        td{padding:2px 0}
+        .r{text-align:right}
+        .bold{font-weight:bold;font-size:13px}
+      </style></head><body>
+      <h2>Smart Restro</h2><p>Restaurant Management System</p><hr/>
+      <p>Table: ${currentTable.number} &nbsp; Order: #${currentOrder.id.slice(-6).toUpperCase()}</p>
+      <p>${new Date().toLocaleString()}</p><hr/>
+      <table><tr><th>Item</th><th class="r">Qty</th><th class="r">Total</th></tr>
+        ${currentOrder.items.map(i => `<tr><td>${i.name}</td><td class="r">${i.quantity}</td><td class="r">Rs.${(i.price * i.quantity).toFixed(2)}</td></tr>`).join('')}
+      </table><hr/>
+      <table>
+        <tr><td>Subtotal</td><td class="r">Rs.${subtotal.toFixed(2)}</td></tr>
+        <tr><td>Gov Tax (5%)</td><td class="r">Rs.${tax.toFixed(2)}</td></tr>
+        <tr><td>Service (10%)</td><td class="r">Rs.${service.toFixed(2)}</td></tr>
+        ${discountAmount > 0 ? `<tr><td>Discount</td><td class="r">-Rs.${discountAmount.toFixed(2)}</td></tr>` : ''}
+      </table><hr/>
+      <table><tr><td class="bold">TOTAL</td><td class="r bold">Rs.${total.toFixed(2)}</td></tr></table>
+      <hr/><p>Thank you for dining with us!</p>
+      </body></html>`);
+    win.document.close();
+    setTimeout(() => { win.focus(); win.print(); win.close(); }, 300);
+  };
+
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in duration-500">
       {/* Message Display */}
@@ -295,8 +400,7 @@ const BillingAndPayment = ({ userRole }) => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button className="p-3.5 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-2xl border border-gray-100 transition-all"><Printer size={22} /></button>
-                    <button className="p-3.5 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-2xl border border-gray-100 transition-all"><Download size={22} /></button>
+                    <button onClick={downloadSlip} className="p-3.5 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-2xl border border-gray-100 transition-all"><Download size={22} /></button>
                     <button onClick={() => setIsEditingBill(true)} className="p-3.5 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-2xl border border-gray-100 transition-all"><Edit3 size={22} /></button>
                   </div>
                 </div>
