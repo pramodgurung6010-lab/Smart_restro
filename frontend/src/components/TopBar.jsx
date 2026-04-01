@@ -1,30 +1,33 @@
 import React, { useState } from 'react';
 import { Bell, Search, Calendar, ChevronDown, LogOut, Phone, Mail, X } from 'lucide-react';
 
-const TopBar = ({ user, onLogout, onSearch, notifications = [], onClearNotification, searchResultsCount }) => {
+const TopBar = ({ user, onLogout, onNavigate, notifications = [], onClearNotification }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const today = new Date().toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    month: 'long', 
-    day: 'numeric',
-    year: 'numeric'
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
   });
 
-  const handleSearch = (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    if (onSearch) {
-      onSearch(query);
-    }
-  };
+  const pages = [
+    { label: 'Dashboard', tab: 'dashboard' },
+    { label: 'Menu Management', tab: 'menu' },
+    { label: 'Table Map', tab: 'tables' },
+    { label: 'Live Orders', tab: 'orders' },
+    { label: 'Billing', tab: 'billing' },
+    { label: 'Analytics', tab: 'reports' },
+    { label: 'Staff Management', tab: 'users' },
+  ];
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && onSearch) {
-      onSearch(searchQuery);
-    }
+  const q = searchQuery.toLowerCase().trim();
+  const suggestions = q.length > 0 ? pages.filter(p => p.label.toLowerCase().includes(q)) : [];
+
+  const navigateTo = (tab) => {
+    if (onNavigate) onNavigate(tab);
+    setSearchQuery('');
+    setShowSuggestions(false);
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -39,18 +42,32 @@ const TopBar = ({ user, onLogout, onSearch, notifications = [], onClearNotificat
           <input
             type="text"
             value={searchQuery}
-            onChange={handleSearch}
-            onKeyPress={handleKeyPress}
+            onChange={e => { setSearchQuery(e.target.value); setShowSuggestions(true); }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                const current = e.target.value.toLowerCase().trim();
+                const match = pages.find(p => p.label.toLowerCase().includes(current));
+                if (match) navigateTo(match.tab);
+              }
+              if (e.key === 'Escape') { setSearchQuery(''); setShowSuggestions(false); }
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
             className="block w-full pl-10 pr-4 py-2 border-none rounded-xl text-xs bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/10 transition-all placeholder:text-gray-400 font-medium"
-            placeholder="Search orders, tables, menu... or type 'billing', 'menu' to navigate"
+            placeholder="Search..."
           />
-          {searchQuery && searchResultsCount !== undefined && (
-            <div className={`absolute top-full left-0 mt-1 text-white text-[9px] font-bold px-2 py-1 rounded-lg shadow-lg ${
-              typeof searchResultsCount === 'string' && searchResultsCount.includes('Navigate') 
-                ? 'bg-blue-600' 
-                : 'bg-emerald-600'
-            }`}>
-              {searchResultsCount}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute top-full left-0 mt-1 w-full bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
+              {suggestions.map(s => (
+                <button
+                  key={s.tab}
+                  onMouseDown={() => navigateTo(s.tab)}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2 transition-colors"
+                >
+                  <Search size={12} className="text-emerald-500" />
+                  {s.label}
+                </button>
+              ))}
             </div>
           )}
         </div>
