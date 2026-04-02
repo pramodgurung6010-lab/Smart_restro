@@ -6,7 +6,6 @@ import { ChefHat, CheckCircle2, Clock, ShoppingBasket, Play, CheckCircle, Loader
 const KitchenDisplay = ({ role }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState({ type: '', text: '' });
 
   // Get auth token
   const getAuthToken = () => {
@@ -17,36 +16,28 @@ const KitchenDisplay = ({ role }) => {
   // API configuration
   const api = axios.create({
     baseURL: 'http://localhost:5002/api',
-    headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
-    }
+    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
   });
 
   // Fetch orders from backend
   const fetchOrders = async (isInitialLoad = false) => {
     try {
-      if (isInitialLoad) {
-        setLoading(true);
-      }
+      if (isInitialLoad) setLoading(true);
       const response = await api.get('/orders');
-      console.log('📦 Fetched orders:', response.data.orders);
       const backendOrders = response.data.orders.map(order => ({
         id: order._id,
         orderId: order.orderId,
         tableId: order.tableId,
         tableNumber: order.tableNumber,
-        items: order.items.map(item => {
-          console.log('📋 Item:', item.name, 'Status:', item.status);
-          return {
-            id: item._id,
-            menuItemId: item.menuItem,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            status: item.status || 'PENDING', // Use item-level status
-            notes: item.specialInstructions || ''
-          };
-        }),
+        items: order.items.map(item => ({
+          id: item._id,
+          menuItemId: item.menuItem,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          status: item.status || 'PENDING',
+          notes: item.specialInstructions || ''
+        })),
         status: order.status,
         total: order.total,
         createdAt: new Date(order.createdAt).getTime()
@@ -54,49 +45,28 @@ const KitchenDisplay = ({ role }) => {
       setOrders(backendOrders);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      if (isInitialLoad) {
-        showMessage('error', 'Failed to load orders');
-      }
     } finally {
-      if (isInitialLoad) {
-        setLoading(false);
-      }
+      if (isInitialLoad) setLoading(false);
     }
-  };
-
-  // Show message helper
-  const showMessage = (type, text) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
   };
 
   // Update order status
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     try {
       await api.patch(`/orders/${orderId}/status`, { status: newStatus });
-      showMessage('success', `Order status updated to ${newStatus}`);
-      fetchOrders(false); // Refresh without loading spinner
+      fetchOrders(false);
     } catch (error) {
       console.error('Error updating order status:', error);
-      showMessage('error', 'Failed to update order status');
     }
   };
 
   // Update item status (individual item)
   const handleUpdateItemStatus = async (orderId, itemId, newStatus) => {
     try {
-      console.log('🔧 Updating item status:', { orderId, itemId, newStatus });
-      const response = await api.patch(`/orders/${orderId}/status`, { 
-        status: newStatus,
-        itemId: itemId
-      });
-      console.log('✅ Item status update response:', response.data);
-      showMessage('success', `Item status updated to ${newStatus}`);
-      fetchOrders(false); // Refresh without loading spinner
+      await api.patch(`/orders/${orderId}/status`, { status: newStatus, itemId });
+      fetchOrders(false);
     } catch (error) {
-      console.error('❌ Error updating item status:', error);
-      console.error('Error details:', error.response?.data || error.message);
-      showMessage('error', error.response?.data?.message || 'Failed to update item status');
+      console.error('Error updating item status:', error);
     }
   };
 
@@ -119,11 +89,11 @@ const KitchenDisplay = ({ role }) => {
 
     switch (item.status) {
       case 'PENDING': 
-        return { label: 'START', next: 'PREPARING', color: 'bg-orange-600 hover:bg-orange-700', icon: <Play size={14} /> };
+        return { label: 'PREPARING', next: 'PREPARING', color: 'bg-orange-600 hover:bg-orange-700', icon: <Play size={14} /> };
       case 'PREPARING': 
-        return { label: 'PREPARING', next: 'READY', color: 'bg-blue-600 hover:bg-blue-700', icon: <Clock size={14} /> };
+        return { label: 'READY', next: 'READY', color: 'bg-blue-600 hover:bg-blue-700', icon: <Clock size={14} /> };
       case 'READY':
-        return { label: 'READY ✓', next: null, color: 'bg-emerald-600', icon: <CheckCircle size={14} /> };
+        return { label: 'SERVED', next: 'SERVED', color: 'bg-emerald-600 hover:bg-emerald-700', icon: <CheckCircle size={14} /> };
       default: 
         return null;
     }
@@ -140,16 +110,6 @@ const KitchenDisplay = ({ role }) => {
 
   return (
     <div className="space-y-6">
-      {/* Message Display */}
-      {message.text && (
-        <div className={`p-4 rounded-2xl flex items-center gap-3 ${
-          message.type === 'success' 
-            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-            : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          {message.text}
-        </div>
-      )}
 
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -186,7 +146,7 @@ const KitchenDisplay = ({ role }) => {
         {activeOrders.length > 0 ? activeOrders.map((order) => {
           const isLate = (Date.now() - order.createdAt) > 15 * 60000;
           const totalItemsCount = getTotalItemsCount(order);
-          const isAllReady = order.items.every(item => item.status === 'READY');
+          const isAllServed = order.items.every(item => item.status === 'SERVED' || item.status === 'READY');
 
           return (
             <div 
@@ -232,21 +192,17 @@ const KitchenDisplay = ({ role }) => {
                             <p className="font-bold text-gray-900 text-sm leading-tight">{item.name}</p>
                           </div>
                           
-                          {/* Item Status Controls */}
+                          {/* Item Status Controls - click the badge to advance */}
                           {!isReadOnly && action ? (
                             <button 
                               onClick={() => handleUpdateItemStatus(order.id, item.id, action.next)}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black text-white shadow-sm transition-all active:scale-95 ${action.color}`}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm transition-all active:scale-95 ${action.color}`}
                             >
                               {action.icon}
-                              {action.label.toUpperCase()}
+                              {action.label}
                             </button>
                           ) : (
-                            <span className={`text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-tighter shadow-sm ${
-                              item.status === 'PENDING' ? 'bg-orange-100 text-orange-700' :
-                              item.status === 'PREPARING' ? 'bg-blue-100 text-blue-700' :
-                              'bg-emerald-100 text-emerald-700'
-                            }`}>
+                            <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 uppercase">
                               {item.status}
                             </span>
                           )}
@@ -278,7 +234,7 @@ const KitchenDisplay = ({ role }) => {
                     </span>
                   </div>
                   
-                  {order.status !== 'SERVED' && isAllReady && (
+                  {order.status !== 'SERVED' && isAllServed && (
                     <button 
                       onClick={() => handleUpdateOrderStatus(order.id, 'SERVED')}
                       className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 shadow-md transition-all active:scale-95 flex items-center gap-2"
