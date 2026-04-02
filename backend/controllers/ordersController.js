@@ -151,13 +151,14 @@ const updateStatus = async (req, res) => {
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
     if (itemId) {
-      const validItemStatuses = ['PENDING', 'PREPARING', 'READY'];
+      const validItemStatuses = ['PENDING', 'PREPARING', 'READY', 'SERVED'];
       if (!validItemStatuses.includes(status)) return res.status(400).json({ message: 'Invalid item status' });
       const item = order.items.id(itemId);
       if (!item) return res.status(404).json({ message: 'Item not found in order' });
       item.status = status;
+      // Only update order-level status based on items — never auto-set to SERVED
       const allStatuses = order.items.map(i => i.status);
-      if (allStatuses.every(s => s === 'READY')) order.status = 'READY';
+      if (allStatuses.every(s => s === 'READY' || s === 'SERVED')) order.status = 'READY';
       else if (allStatuses.some(s => s === 'PREPARING' || s === 'READY')) order.status = 'PREPARING';
       else order.status = 'PENDING';
     } else {
@@ -180,7 +181,7 @@ const updateStatus = async (req, res) => {
 const updateItemStatus = async (req, res) => {
   try {
     const { orderId, itemId, status } = req.body;
-    const validStatuses = ['PENDING', 'PREPARING', 'READY'];
+    const validStatuses = ['PENDING', 'PREPARING', 'READY', 'SERVED'];
     if (!validStatuses.includes(status)) return res.status(400).json({ message: 'Invalid item status' });
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: 'Order not found' });
@@ -188,7 +189,8 @@ const updateItemStatus = async (req, res) => {
     if (!item) return res.status(404).json({ message: 'Item not found in order' });
     item.status = status;
     const allStatuses = order.items.map(i => i.status);
-    if (allStatuses.every(s => s === 'READY')) order.status = 'READY';
+    // Never auto-set order to SERVED from item updates — only explicit MARK AS SERVED does that
+    if (allStatuses.every(s => s === 'READY' || s === 'SERVED')) order.status = 'READY';
     else if (allStatuses.some(s => s === 'PREPARING' || s === 'READY')) order.status = 'PREPARING';
     else order.status = 'PENDING';
     await order.save();
