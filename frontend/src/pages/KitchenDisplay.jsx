@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { UserRole } from '../types';
-import { ChefHat, CheckCircle2, Clock, Eye, ShoppingBasket, Play, CheckCircle, Loader } from 'lucide-react';
+import { ChefHat, CheckCircle2, Clock, ShoppingBasket, Play, CheckCircle, Loader } from 'lucide-react';
 
 const KitchenDisplay = ({ role }) => {
   const [orders, setOrders] = useState([]);
@@ -110,8 +110,8 @@ const KitchenDisplay = ({ role }) => {
 
   const activeOrders = orders.filter(o => o.status !== 'SERVED' && o.status !== 'CANCELLED');
   
-  // Waiters can only mark orders as served (not update item statuses)
-  const isReadOnly = role === UserRole.WAITER;
+  // Waiters can update item statuses and mark orders as served
+  const isReadOnly = false;
   const isWaiter = role === UserRole.WAITER;
 
   const getItemStatusAction = (item) => {
@@ -123,7 +123,7 @@ const KitchenDisplay = ({ role }) => {
       case 'PREPARING': 
         return { label: 'PREPARING', next: 'READY', color: 'bg-blue-600 hover:bg-blue-700', icon: <Clock size={14} /> };
       case 'READY':
-        return { label: 'READY', next: null, color: 'bg-emerald-600', icon: <CheckCircle size={14} /> };
+        return { label: 'READY ✓', next: null, color: 'bg-emerald-600', icon: <CheckCircle size={14} /> };
       default: 
         return null;
     }
@@ -155,7 +155,7 @@ const KitchenDisplay = ({ role }) => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Live Order Monitor</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {isReadOnly ? 'Mark orders as served once all items are ready' : 'Manage kitchen throughput and service readiness'}
+            {isWaiter ? 'Manage orders and mark items as prepared and served' : 'Manage kitchen throughput and service readiness'}
           </p>
         </div>
         <div className="flex items-center gap-4 bg-white p-2 px-4 rounded-xl border border-gray-200 shadow-sm">
@@ -208,11 +208,6 @@ const KitchenDisplay = ({ role }) => {
                   </div>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">#{order.orderId}</span>
-                    {isReadOnly && (
-                      <span className="flex items-center gap-1 text-[8px] font-black bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded uppercase">
-                        <Eye size={10} /> View Only
-                      </span>
-                    )}
                   </div>
                 </div>
                 <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shrink-0 ${
@@ -283,14 +278,20 @@ const KitchenDisplay = ({ role }) => {
                     </span>
                   </div>
                   
-                  {(!isReadOnly || isWaiter) && isAllReady && (
+                  {order.status !== 'SERVED' && isAllReady && (
                     <button 
                       onClick={() => handleUpdateOrderStatus(order.id, 'SERVED')}
-                      className="px-4 py-2 bg-emerald-600 text-white text-[11px] font-black rounded-xl hover:bg-emerald-700 shadow-md transition-all active:scale-95 flex items-center gap-2"
+                      className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 shadow-md transition-all active:scale-95 flex items-center gap-2"
                     >
                       <ChefHat size={14} />
                       MARK SERVED
                     </button>
+                  )}
+                  {order.status === 'SERVED' && (
+                    <span className="px-4 py-2 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl flex items-center gap-2">
+                      <CheckCircle size={14} />
+                      SERVED
+                    </span>
                   )}
                 </div>
               </div>
