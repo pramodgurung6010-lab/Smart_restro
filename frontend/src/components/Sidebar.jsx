@@ -6,7 +6,7 @@ const Sidebar = ({ activeTab, setActiveTab, role, onLogout }) => {
   const filteredNav = NAVIGATION_ITEMS.filter(item => item.roles.includes(role));
 
   return (
-    <div className="w-64 bg-white border-r border-gray-100 flex flex-col h-full z-20 shrink-0">
+    <div className="w-64 bg-white border-r border-gray-100 flex flex-col h-full z-20 shrink-0 shadow-xl lg:shadow-none">
       <div className="p-8 pb-10 flex items-center gap-3">
         <div className="bg-emerald-600 p-2.5 rounded-2xl shadow-lg shadow-emerald-100">
           <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
