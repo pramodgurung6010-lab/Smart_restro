@@ -9,10 +9,7 @@ const Sidebar = ({ activeTab, setActiveTab, role, onLogout }) => {
     <div className="w-64 bg-white border-r border-gray-100 flex flex-col h-full z-20 shrink-0 shadow-xl lg:shadow-none">
       <div className="p-8 pb-10 flex items-center gap-3">
         <div className="bg-emerald-600 p-2.5 rounded-2xl shadow-lg shadow-emerald-100">
-          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 12L8 20M16 8L16 24M24 12L24 20" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M20 8L20 12M12 20L12 24" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
+          <img src="/logo.svg" alt="Smart Restro" width="30" height="30" />
         </div>
         <span className="text-xl font-black text-emerald-900 tracking-tight">Smart Restro</span>
       </div>
