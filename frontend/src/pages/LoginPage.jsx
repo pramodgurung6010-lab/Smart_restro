@@ -110,10 +110,7 @@ const LoginPage = ({ onLogin }) => {
           {/* Logo and title */}
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-600 rounded-2xl mb-6">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 12L8 20M16 8L16 24M24 12L24 20" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                <path d="M20 8L20 12M12 20L12 24" stroke="white" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+              <img src="/logo.svg" alt="Smart Restro" width="40" height="40" />
             </div>
             <h1 className="text-2xl font-bold text-emerald-600 mb-2">Smart Restro</h1>
             <p className="text-lg text-gray-700 mb-8">Welcome Back, Please login to your account</p>
