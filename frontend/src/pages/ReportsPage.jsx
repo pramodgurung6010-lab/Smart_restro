@@ -104,8 +104,8 @@ const ReportsPage = () => {
   return (
     <div className="space-y-8 pb-10 max-w-[1600px] mx-auto animate-in fade-in duration-500">
       {/* Header & Advanced Filters */}
-      <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+      <div className="bg-white p-4 md:p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <h1 className="text-2xl font-bold text-gray-900">Analytics Hub</h1>
             <p className="text-sm text-gray-500 mt-1">Detailed financial performance and trend analysis</p>
