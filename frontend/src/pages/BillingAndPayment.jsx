@@ -329,9 +329,9 @@ const BillingAndPayment = ({ userRole }) => {
         </div>
       </div>
 
-      <div className="flex-1 flex gap-8 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 overflow-hidden">
         {/* Left Table List */}
-        <div className="w-[360px] flex flex-col gap-3 overflow-y-auto no-scrollbar">
+        <div className="w-full lg:w-[360px] flex flex-col gap-3 overflow-y-auto no-scrollbar max-h-64 lg:max-h-none">
           {pendingTables.map(table => {
             const order = orders.find(o => o.id === table.currentOrderId);
             const isSelected = selectedTableId === table.id;
