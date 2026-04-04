@@ -52,11 +52,14 @@ const KitchenDisplay = ({ role }) => {
 
   // Update order status
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    // Optimistically update local state immediately
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     try {
       await api.patch(`/orders/${orderId}/status`, { status: newStatus });
       fetchOrders(false);
     } catch (error) {
       console.error('Error updating order status:', error);
+      fetchOrders(false); // revert on error
     }
   };
 
@@ -91,9 +94,9 @@ const KitchenDisplay = ({ role }) => {
       case 'PENDING': 
         return { label: 'PREPARING', next: 'PREPARING', color: 'bg-orange-600 hover:bg-orange-700', icon: <Play size={14} /> };
       case 'PREPARING': 
-        return { label: 'READY', next: 'READY', color: 'bg-blue-600 hover:bg-blue-700', icon: <Clock size={14} /> };
+        return { label: 'READY', next: 'READY', color: 'bg-emerald-500 hover:bg-emerald-600', icon: <CheckCircle size={14} /> };
       case 'READY':
-        return { label: 'SERVED', next: 'SERVED', color: 'bg-emerald-600 hover:bg-emerald-700', icon: <CheckCircle size={14} /> };
+        return { label: 'SERVED', next: 'SERVED', color: 'bg-gray-400 hover:bg-gray-500', icon: <CheckCircle size={14} /> };
       default: 
         return null;
     }
@@ -121,15 +124,15 @@ const KitchenDisplay = ({ role }) => {
         <div className="flex items-center gap-4 bg-white p-2 px-4 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse"></div>
-            <span className="text-[10px] font-black text-gray-600 uppercase">Pending</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
-            <span className="text-[10px] font-black text-gray-600 uppercase">Cooking</span>
+            <span className="text-[10px] font-black text-gray-600 uppercase">Preparing</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
             <span className="text-[10px] font-black text-gray-600 uppercase">Ready</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-gray-400"></div>
+            <span className="text-[10px] font-black text-gray-600 uppercase">Served</span>
           </div>
         </div>
       </div>
@@ -152,9 +155,9 @@ const KitchenDisplay = ({ role }) => {
             <div 
               key={order.id} 
               className={`bg-white rounded-2xl border-t-8 shadow-lg overflow-hidden flex flex-col transition-all hover:shadow-xl ${
-                order.status === 'PENDING' ? 'border-orange-500' :
-                order.status === 'PREPARING' ? 'border-blue-500' :
-                'border-emerald-500'
+                order.status === 'SERVED' || order.items.every(i => i.status === 'SERVED') ? 'border-gray-300 opacity-60' :
+                order.items.some(i => i.status === 'PREPARING' || i.status === 'READY') ? 'border-emerald-500' :
+                'border-orange-500'
               }`}
             >
               <div className="p-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
@@ -202,7 +205,7 @@ const KitchenDisplay = ({ role }) => {
                               {action.label}
                             </button>
                           ) : (
-                            <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 uppercase">
+                            <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 uppercase">
                               {item.status}
                             </span>
                           )}
@@ -227,7 +230,8 @@ const KitchenDisplay = ({ role }) => {
                     <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Order Progress</span>
                     <span className={`text-[11px] font-black uppercase tracking-tighter ${
                       order.status === 'PENDING' ? 'text-orange-600' :
-                      order.status === 'PREPARING' ? 'text-blue-600' :
+                      order.status === 'PREPARING' ? 'text-orange-600' :
+                      order.status === 'SERVED' ? 'text-emerald-700' :
                       'text-emerald-600'
                     }`}>
                       {order.status}
