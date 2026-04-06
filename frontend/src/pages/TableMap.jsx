@@ -63,6 +63,7 @@ const TableMap = ({ onSelectTable }) => {
       originalCapacity: t.originalCapacity,
       isSplit: t.isSplit,
       parentId: t.parentId,
+      manualStatus: t.manualStatus,
     }));
     localStorage.setItem('tableMapState', JSON.stringify(stateToSave));
   }, [tables]);
@@ -90,8 +91,9 @@ const TableMap = ({ onSelectTable }) => {
         
         // Update table statuses based on active orders - preserve merge/split state
         setTables(prev => prev.map(table => {
-          // Never touch merged slave tables
           if (table.status === TableStatus.MERGED) return table;
+          // Never override manually set status (RESERVED or manually OCCUPIED)
+          if (table.manualStatus) return table;
           
           const activeOrder = backendOrders.find(order => 
             order.tableId === table.id && 
@@ -103,9 +105,6 @@ const TableMap = ({ onSelectTable }) => {
             return { ...table, status: TableStatus.OCCUPIED, currentOrderId: activeOrder._id };
           }
           
-          // Reset OCCUPIED tables that were order-driven back to AVAILABLE:
-          // - table has a currentOrderId (was order-driven), OR
-          // - table's currentOrderId points to a paid/served/missing order
           if (table.status === TableStatus.OCCUPIED && !table.isSplit && table.currentOrderId) {
             return { ...table, status: TableStatus.AVAILABLE, currentOrderId: undefined };
           }
@@ -184,15 +183,26 @@ const TableMap = ({ onSelectTable }) => {
   };
 
   const handleUpdateStatus = (tableId, status) => {
-    setTables(prev => prev.map(t => {
-      if (t.id === tableId) {
-        if (status === TableStatus.AVAILABLE) {
-          return { ...t, status, currentOrderId: undefined };
+    setTables(prev => {
+      const updated = prev.map(t => {
+        if (t.id === tableId) {
+          if (status === TableStatus.AVAILABLE) {
+            return { ...t, status, currentOrderId: undefined, manualStatus: false };
+          }
+          return { ...t, status, manualStatus: true };
         }
-        return { ...t, status };
-      }
-      return t;
-    }));
+        return t;
+      });
+      const stateToSave = updated.map(t => ({
+        id: t.id, number: t.number, capacity: t.capacity,
+        status: t.status === TableStatus.MERGED ? TableStatus.MERGED : t.status,
+        mergedWith: t.mergedWith, masterTableId: t.masterTableId,
+        originalCapacity: t.originalCapacity, isSplit: t.isSplit, parentId: t.parentId,
+        manualStatus: t.manualStatus,
+      }));
+      localStorage.setItem('tableMapState', JSON.stringify(stateToSave));
+      return updated;
+    });
   };
 
   const handleReassign = async (fromTableId, toTableId) => {
