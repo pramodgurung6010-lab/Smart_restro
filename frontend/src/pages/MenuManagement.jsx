@@ -23,12 +23,12 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
     return user.token;
   };
 
-  // API configuration
-  const api = axios.create({
-    baseURL: 'http://localhost:5002/api',
-    headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
-    }
+  // API configuration - reads token fresh on each request
+  const api = axios.create({ baseURL: 'http://localhost:5002/api' });
+  api.interceptors.request.use(config => {
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    if (user.token) config.headers.Authorization = `Bearer ${user.token}`;
+    return config;
   });
 
   // Fetch menu items from backend
@@ -90,7 +90,7 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
       const backendData = {
         name: formData.name,
         category: formData.category,
-        price: formData.price,
+        price: parseFloat(formData.price),
         isAvailable: formData.available,
         description: formData.description
       };
@@ -121,7 +121,8 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
       setShowModal(false);
     } catch (error) {
       console.error('Error saving menu item:', error);
-      alert('Failed to save menu item. Please try again.');
+      const msg = error.response?.data?.message || error.message || 'Failed to save menu item';
+      alert(msg);
     }
   };
 
