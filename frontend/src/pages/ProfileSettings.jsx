@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Save, UserCircle, Key, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
-const ProfileSettings = ({ user, onUpdate }) => {
+const ProfileSettings = ({ user, onUpdate, onLogout }) => {
   const [formData, setFormData] = useState({ 
     name: user.name || user.username, 
     email: user.email || '', 
@@ -91,7 +91,8 @@ const ProfileSettings = ({ user, onUpdate }) => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      const token = currentUser.token;
       await axios.put('http://localhost:5002/api/auth/change-password', {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
@@ -100,13 +101,10 @@ const ProfileSettings = ({ user, onUpdate }) => {
       });
 
       setPasswordSuccess(true);
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
-      
-      setTimeout(() => setPasswordSuccess(false), 5000);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('activeTab');
+      window.location.reload();
     } catch (err) {
       setPasswordError(err.response?.data?.message || 'Failed to change password');
     } finally {
