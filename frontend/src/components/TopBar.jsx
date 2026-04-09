@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Bell, Search, Calendar, ChevronDown, LogOut, Phone, Mail, X } from 'lucide-react';
+import { Bell, Search, Calendar, ChevronDown, LogOut, Phone, Mail, X, Menu } from 'lucide-react';
 
-const TopBar = ({ user, onLogout, onNavigate, notifications = [], onClearNotification }) => {
+const TopBar = ({ user, onLogout, onNavigate, notifications = [], onClearNotification, onMenuToggle }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,9 +33,13 @@ const TopBar = ({ user, onLogout, onNavigate, notifications = [], onClearNotific
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 z-30 shrink-0 relative">
-      <div className="flex items-center gap-6 flex-1">
-        <div className="relative w-full max-w-[280px]">
+    <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-8 z-30 shrink-0 relative">
+      <div className="flex items-center gap-3 flex-1">
+        {/* Hamburger - mobile only */}
+        <button onClick={onMenuToggle} className="lg:hidden p-2 text-gray-500 hover:text-emerald-600 transition-colors">
+          <Menu size={22} />
+        </button>
+        <div className="relative w-full max-w-[240px] md:max-w-[280px]">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 text-gray-400" />
           </div>
@@ -73,7 +77,7 @@ const TopBar = ({ user, onLogout, onNavigate, notifications = [], onClearNotific
         </div>
       </div>
 
-      <div className="flex-1 flex justify-center items-center text-[13px] text-gray-500 font-medium">
+      <div className="hidden md:flex flex-1 justify-center items-center text-[13px] text-gray-500 font-medium">
         <Calendar className="h-4 w-4 mr-2 text-emerald-600" />
         {today}
       </div>
