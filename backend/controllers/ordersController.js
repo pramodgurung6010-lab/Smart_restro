@@ -156,9 +156,9 @@ const updateStatus = async (req, res) => {
       const item = order.items.id(itemId);
       if (!item) return res.status(404).json({ message: 'Item not found in order' });
       item.status = status;
-      // Only update order-level status based on items — never auto-set to SERVED
       const allStatuses = order.items.map(i => i.status);
-      if (allStatuses.every(s => s === 'READY' || s === 'SERVED')) order.status = 'READY';
+      if (allStatuses.every(s => s === 'SERVED')) order.status = 'SERVED';
+      else if (allStatuses.every(s => s === 'READY' || s === 'SERVED')) order.status = 'READY';
       else if (allStatuses.some(s => s === 'PREPARING' || s === 'READY')) order.status = 'PREPARING';
       else order.status = 'PENDING';
     } else {
@@ -189,8 +189,8 @@ const updateItemStatus = async (req, res) => {
     if (!item) return res.status(404).json({ message: 'Item not found in order' });
     item.status = status;
     const allStatuses = order.items.map(i => i.status);
-    // Never auto-set order to SERVED from item updates — only explicit MARK AS SERVED does that
-    if (allStatuses.every(s => s === 'READY' || s === 'SERVED')) order.status = 'READY';
+    if (allStatuses.every(s => s === 'SERVED')) order.status = 'SERVED';
+    else if (allStatuses.every(s => s === 'READY' || s === 'SERVED')) order.status = 'READY';
     else if (allStatuses.some(s => s === 'PREPARING' || s === 'READY')) order.status = 'PREPARING';
     else order.status = 'PENDING';
     await order.save();
