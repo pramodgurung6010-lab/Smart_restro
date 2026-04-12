@@ -19,10 +19,18 @@ const TopBar = ({ user, onLogout, onNavigate, notifications = [], onClearNotific
     { label: 'Billing', tab: 'billing' },
     { label: 'Analytics', tab: 'reports' },
     { label: 'Staff Management', tab: 'users' },
+    { label: 'My Account', tab: 'profile', aliases: ['Profile', 'Account', 'Settings'] },
   ];
 
+  const matchesPage = (p, query) => {
+    const q = query.toLowerCase().trim();
+    if (!q) return false;
+    const texts = [p.label, ...(p.aliases || [])].map((t) => t.toLowerCase());
+    return texts.some((t) => t.includes(q));
+  };
+
   const q = searchQuery.toLowerCase().trim();
-  const suggestions = q.length > 0 ? pages.filter(p => p.label.toLowerCase().includes(q)) : [];
+  const suggestions = q.length > 0 ? pages.filter((p) => matchesPage(p, q)) : [];
 
   const navigateTo = (tab) => {
     if (onNavigate) onNavigate(tab);
@@ -49,8 +57,8 @@ const TopBar = ({ user, onLogout, onNavigate, notifications = [], onClearNotific
             onChange={e => { setSearchQuery(e.target.value); setShowSuggestions(true); }}
             onKeyDown={e => {
               if (e.key === 'Enter') {
-                const current = e.target.value.toLowerCase().trim();
-                const match = pages.find(p => p.label.toLowerCase().includes(current));
+                const current = e.target.value.trim();
+                const match = pages.find((p) => matchesPage(p, current));
                 if (match) navigateTo(match.tab);
               }
               if (e.key === 'Escape') { setSearchQuery(''); setShowSuggestions(false); }

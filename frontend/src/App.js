@@ -73,7 +73,7 @@ const App = () => {
     <div className='flex h-screen bg-gray-50'>
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} role={currentUser.role} onLogout={handleLogout} />
       <div className='flex-1 flex flex-col overflow-hidden'>
-        <TopBar user={currentUser} onLogout={handleLogout} />
+        <TopBar user={currentUser} onLogout={handleLogout} onNavigate={setActiveTab} />
         <main className='flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6'>
           {renderContent()}
         </main>
