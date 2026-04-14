@@ -58,19 +58,6 @@ const KitchenDisplay = ({ role }) => {
     }
   };
 
-  // Update order status
-  const handleUpdateOrderStatus = async (orderId, newStatus) => {
-    // Optimistically update local state immediately
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-    try {
-      await api.patch(`/orders/${orderId}/status`, { status: newStatus });
-      fetchOrders(false);
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      fetchOrders(false); // revert on error
-    }
-  };
-
   // Update individual item status
   const handleUpdateItemStatus = async (orderId, itemId, newStatus) => {
     const normalizedOrderId = String(orderId);
@@ -179,8 +166,6 @@ const KitchenDisplay = ({ role }) => {
   const isReadOnly = false;
   const isWaiter = role === UserRole.WAITER;
 
-  const ORDER_STAGES = ['PENDING', 'PREPARING', 'READY', 'SERVED'];
-
   const getNextStage = (status) => {
     switch (status) {
       case 'PENDING':
@@ -260,7 +245,6 @@ const KitchenDisplay = ({ role }) => {
         {activeOrders.length > 0 ? activeOrders.map((order) => {
           const isLate = (Date.now() - order.createdAt) > 15 * 60000;
           const totalItemsCount = getTotalItemsCount(order);
-          const isServed = order.status === 'SERVED';
 
           return (
             <div 
