@@ -259,42 +259,6 @@ const BillingAndPayment = ({ userRole }) => {
     doc.save(`Bill_Table${currentTable.number}_${Date.now()}.pdf`);
   };
 
-  const printSlip = () => {
-    if (!currentOrder || !currentTable) return;
-    const orderSubtotal = isEditingBill ? getEditedOrderTotal() : currentOrder.subtotal || currentOrder.total;
-    const { subtotal, tax, service, discountAmount, total } = calculateTotals(orderSubtotal);
-    const win = window.open('', '_blank');
-    win.document.write(`<html><head><title>Bill - Table ${currentTable.number}</title>
-      <style>
-        body{font-family:monospace;width:280px;margin:0 auto;font-size:12px}
-        h2{text-align:center;margin:4px 0;font-size:16px}
-        p{text-align:center;margin:2px 0;font-size:11px}
-        hr{border:1px dashed #000}
-        table{width:100%;border-collapse:collapse;font-size:11px}
-        th{text-align:left;border-bottom:1px solid #000;padding:2px 0}
-        td{padding:2px 0}
-        .r{text-align:right}
-        .bold{font-weight:bold;font-size:13px}
-      </style></head><body>
-      <h2>Smart Restro</h2><p>Restaurant Management System</p><hr/>
-      <p>Table: ${currentTable.number} &nbsp; Order: #${currentOrder.id.slice(-6).toUpperCase()}</p>
-      <p>${new Date().toLocaleString()}</p><hr/>
-      <table><tr><th>Item</th><th class="r">Qty</th><th class="r">Total</th></tr>
-        ${currentOrder.items.map(i => `<tr><td>${i.name}</td><td class="r">${i.quantity}</td><td class="r">Rs.${(i.price * i.quantity).toFixed(2)}</td></tr>`).join('')}
-      </table><hr/>
-      <table>
-        <tr><td>Subtotal</td><td class="r">Rs.${subtotal.toFixed(2)}</td></tr>
-        <tr><td>Gov Tax (5%)</td><td class="r">Rs.${tax.toFixed(2)}</td></tr>
-        <tr><td>Service (10%)</td><td class="r">Rs.${service.toFixed(2)}</td></tr>
-        ${discountAmount > 0 ? `<tr><td>Discount</td><td class="r">-Rs.${discountAmount.toFixed(2)}</td></tr>` : ''}
-      </table><hr/>
-      <table><tr><td class="bold">TOTAL</td><td class="r bold">Rs.${total.toFixed(2)}</td></tr></table>
-      <hr/><p>Thank you for dining with us!</p>
-      </body></html>`);
-    win.document.close();
-    setTimeout(() => { win.focus(); win.print(); win.close(); }, 300);
-  };
-
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in duration-500">
       {/* Message Display */}
