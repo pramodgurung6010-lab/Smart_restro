@@ -17,12 +17,6 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
     description: ''
   });
 
-  // Get auth token from localStorage
-  const getAuthToken = () => {
-    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    return user.token;
-  };
-
   // API configuration - reads token fresh on each request
   const api = axios.create({ baseURL: 'http://localhost:5002/api' });
   api.interceptors.request.use(config => {
@@ -56,6 +50,7 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
   // Load menu on component mount
   useEffect(() => {
     fetchMenu();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredMenu = menu.filter(item => {
