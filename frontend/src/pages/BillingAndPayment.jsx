@@ -110,12 +110,14 @@ const BillingAndPayment = ({ userRole }) => {
 
   const getEditedOrderTotal = () => {
     if (!currentOrder) return 0;
-    
     let total = 0;
-    currentOrder.items.forEach(item => {
-      const editedItem = editedItems[item.id];
+    currentOrder.items.forEach((item, idx) => {
+      const itemKey = item._id || item.id || idx;
+      const editedItem = editedItems[itemKey];
       if (editedItem) {
-        total += editedItem.price * editedItem.quantity;
+        const qty = parseFloat(editedItem.quantity) || item.quantity;
+        const price = parseFloat(editedItem.price) || item.price;
+        total += price * qty;
       } else {
         total += item.price * item.quantity;
       }
@@ -124,11 +126,12 @@ const BillingAndPayment = ({ userRole }) => {
   };
 
   const handleItemEdit = (itemId, field, value) => {
+    if (!itemId) return;
     setEditedItems(prev => ({
       ...prev,
       [itemId]: {
         ...prev[itemId],
-        [field]: field === 'quantity' ? parseInt(value) || 0 : parseFloat(value) || 0
+        [field]: value // store raw string while typing
       }
     }));
   };
@@ -378,20 +381,24 @@ const BillingAndPayment = ({ userRole }) => {
                   </div>
                   <div className="space-y-5">
                     {currentOrder.items.map((item, idx) => {
-                      const editedItem = editedItems[item.id];
+                      const itemKey = item._id || item.id || idx;
+                      const editedItem = editedItems[itemKey];
                       const displayQuantity = editedItem?.quantity ?? item.quantity;
                       const displayPrice = editedItem?.price ?? item.price;
+                      const calcQuantity = parseFloat(displayQuantity) || item.quantity;
+                      const calcPrice = parseFloat(displayPrice) || item.price;
                       
                       return (
-                        <div key={idx} className="grid grid-cols-12 text-[14px] items-center">
+                        <div key={itemKey} className="grid grid-cols-12 text-[14px] items-center">
                           <div className="col-span-6 font-bold text-gray-800">{item.name}</div>
                           <div className="col-span-2 text-center">
                             {isEditingBill && userRole === 'ADMIN' ? (
                               <input
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
                                 min="1"
                                 value={displayQuantity}
-                                onChange={(e) => handleItemEdit(item.id, 'quantity', e.target.value)}
+                                onChange={(e) => handleItemEdit(itemKey, 'quantity', e.target.value)}
                                 className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-xs"
                               />
                             ) : (
@@ -401,18 +408,18 @@ const BillingAndPayment = ({ userRole }) => {
                           <div className="col-span-2 text-right">
                             {isEditingBill && userRole === 'ADMIN' ? (
                               <input
-                                type="number"
-                                step="0.01"
+                                type="text"
+                                inputMode="decimal"
                                 value={displayPrice}
-                                onChange={(e) => handleItemEdit(item.id, 'price', e.target.value)}
-                                className="w-16 text-right border border-gray-300 rounded px-1 py-0.5 text-xs font-mono"
+                                onChange={(e) => handleItemEdit(itemKey, 'price', e.target.value)}
+                                className="w-16 text-right border border-gray-300 rounded px-1 py-0.5 text-xs"
                               />
                             ) : (
-                              <span className="text-gray-400 font-mono">Rs.{displayPrice.toFixed(2)}</span>
+                              <span className="text-gray-400 font-mono">Rs.{calcPrice.toFixed(2)}</span>
                             )}
                           </div>
                           <div className="col-span-2 text-right font-bold text-gray-900 font-mono">
-                            Rs.{(displayPrice * displayQuantity).toFixed(2)}
+                            Rs.{(calcPrice * calcQuantity).toFixed(2)}
                           </div>
                         </div>
                       );
