@@ -136,12 +136,65 @@ const BillingAndPayment = ({ userRole }) => {
     }));
   };
 
+  const saveEdits = async () => {
+    if (!currentOrder || Object.keys(editedItems).length === 0) {
+      setIsEditingBill(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const updatedItems = currentOrder.items.map((item, idx) => {
+        const itemKey = item._id || item.id || idx;
+        const edited = editedItems[itemKey];
+        return {
+          menuItemId: item.menuItem?._id || item.menuItem,
+          quantity: edited?.quantity ? parseInt(edited.quantity) || item.quantity : item.quantity,
+          specialInstructions: item.specialInstructions || '',
+          status: item.status || 'PENDING'
+        };
+      });
+      await api.put(`/orders/${currentOrder.id}`, {
+        tableId: currentOrder.tableId,
+        tableNumber: currentOrder.tableNumber,
+        items: updatedItems
+      });
+      await fetchOrdersAndTables();
+      setEditedItems({});
+      setIsEditingBill(false);
+      setMessage({ type: 'success', text: 'Bill updated successfully!' });
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Failed to save changes' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePay = async () => {
     if (!selectedTableId || !paymentMethod || !currentOrder) return;
     
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
+      // If bill was edited, save the updated items to backend first
+      if (isEditingBill && Object.keys(editedItems).length > 0) {
+        const updatedItems = currentOrder.items.map((item, idx) => {
+          const itemKey = item._id || item.id || idx;
+          const edited = editedItems[itemKey];
+          return {
+            menuItemId: item.menuItem?._id || item.menuItem,
+            quantity: edited?.quantity ? parseInt(edited.quantity) || item.quantity : item.quantity,
+            specialInstructions: item.specialInstructions || '',
+            status: item.status || 'PENDING'
+          };
+        });
+        await api.put(`/orders/${currentOrder.id}`, {
+          tableId: currentOrder.tableId,
+          tableNumber: currentOrder.tableNumber,
+          items: updatedItems
+        });
+      }
+
       // Calculate the actual total shown to user (with service charge)
       const orderSubtotal = isEditingBill ? getEditedOrderTotal() : currentOrder.subtotal || currentOrder.total;
       const { total: displayTotal } = calculateTotals(orderSubtotal);
@@ -432,14 +485,14 @@ const BillingAndPayment = ({ userRole }) => {
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="text-sm font-bold text-gray-700">Admin Controls</h4>
                         <button
-                          onClick={() => setIsEditingBill(!isEditingBill)}
+                          onClick={isEditingBill ? saveEdits : () => setIsEditingBill(true)}
                           className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                             isEditingBill 
                               ? 'bg-emerald-600 text-white' 
                               : 'bg-gray-100 text-gray-600 hover:bg-emerald-50'
                           }`}
                         >
-                          {isEditingBill ? 'Done Editing' : 'Edit Bill'}
+                          {isEditingBill ? 'Save Changes' : 'Edit Bill'}
                         </button>
                       </div>
                       
