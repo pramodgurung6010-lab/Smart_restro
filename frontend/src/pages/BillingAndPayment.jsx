@@ -18,7 +18,7 @@ const BillingAndPayment = ({ userRole }) => {
   const [view, setView] = useState('PENDING');
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [discount, setDiscount] = useState(0);
+  const [discount, setDiscount] = useState('');
   const [discountType, setDiscountType] = useState('percentage');
   const [editedItems, setEditedItems] = useState({});
   const [isEditingBill, setIsEditingBill] = useState(false);
@@ -94,13 +94,14 @@ const BillingAndPayment = ({ userRole }) => {
     const tax = Number((sub * 0.05).toFixed(2));
     const service = Number((sub * 0.10).toFixed(2));
     const subtotalWithTaxService = sub + tax + service;
+    const discountVal = parseFloat(discount) || 0;
     
     let discountAmount = 0;
-    if (discount > 0) {
+    if (discountVal > 0) {
       if (discountType === 'percentage') {
-        discountAmount = Number((subtotalWithTaxService * (discount / 100)).toFixed(2));
+        discountAmount = Number((subtotalWithTaxService * (discountVal / 100)).toFixed(2));
       } else {
-        discountAmount = Number(discount.toFixed(2));
+        discountAmount = Number(discountVal.toFixed(2));
       }
     }
     
@@ -518,7 +519,7 @@ const BillingAndPayment = ({ userRole }) => {
                             min="0"
                             max={discountType === 'percentage' ? '100' : undefined}
                             value={discount}
-                            onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                            onChange={(e) => setDiscount(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
                             placeholder="0"
                           />
