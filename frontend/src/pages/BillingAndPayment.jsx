@@ -9,7 +9,6 @@ import {
   CheckCircle, 
   Clock, 
   Download,
-  Edit3,
   History
 } from 'lucide-react';
 
@@ -230,7 +229,7 @@ const BillingAndPayment = ({ userRole }) => {
           setSelectedTableId(null);
           setPaymentMethod(null);
           setIsSuccess(false);
-          setDiscount(0);
+          setDiscount('');
           setEditedItems({});
           setIsEditingBill(false);
           setMessage({ type: '', text: '' });
@@ -363,7 +362,7 @@ const BillingAndPayment = ({ userRole }) => {
             return (
               <button
                 key={table.id}
-                onClick={() => { setSelectedTableId(table.id); setPaymentMethod(null); setDiscount(0); setEditedItems({}); setIsEditingBill(false); }}
+                onClick={() => { setSelectedTableId(table.id); setPaymentMethod(null); setDiscount(''); setEditedItems({}); setIsEditingBill(false); }}
                 className={`flex items-center gap-4 p-5 rounded-[28px] border-2 transition-all text-left ${
                   isSelected ? 'border-emerald-500 bg-white ring-4 ring-emerald-50 shadow-lg' : 'border-gray-100 bg-white hover:border-emerald-200'
                 }`}
@@ -422,7 +421,6 @@ const BillingAndPayment = ({ userRole }) => {
                   </div>
                   <div className="flex gap-2">
                     <button onClick={downloadSlip} className="p-3.5 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-2xl border border-gray-100 transition-all"><Download size={22} /></button>
-                    <button onClick={() => setIsEditingBill(true)} className="p-3.5 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-2xl border border-gray-100 transition-all"><Edit3 size={22} /></button>
                   </div>
                 </div>
 
