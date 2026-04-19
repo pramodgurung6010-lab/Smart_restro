@@ -514,10 +514,8 @@ const BillingAndPayment = ({ userRole }) => {
                             Discount {discountType === 'percentage' ? '(%)' : '(Rs.)'}
                           </label>
                           <input
-                            type="number"
-                            step={discountType === 'percentage' ? '1' : '0.01'}
-                            min="0"
-                            max={discountType === 'percentage' ? '100' : undefined}
+                            type="text"
+                            inputMode="decimal"
                             value={discount}
                             onChange={(e) => setDiscount(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
