@@ -3,7 +3,8 @@ import {
   LayoutDashboard, 
   Utensils, 
   Table as TableIcon, 
-  Receipt, 
+  Receipt,
+  ClipboardList,
   BarChart3, 
   Users, 
   UserCircle
@@ -55,7 +56,7 @@ export const NAVIGATION_ITEMS = [
   { 
     id: 'orders', 
     label: 'Live Orders', 
-    icon: <Receipt size={20} />, 
+    icon: <ClipboardList size={20} />, 
     roles: [UserRole.ADMIN, UserRole.WAITER, UserRole.KITCHEN] 
   },
   { 
