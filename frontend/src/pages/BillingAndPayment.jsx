@@ -502,7 +502,7 @@ const BillingAndPayment = ({ userRole }) => {
                           <label className="block text-xs font-bold text-gray-600 mb-1">Discount Type</label>
                           <select
                             value={discountType}
-                            onChange={(e) => setDiscountType(e.target.value)}
+                            onChange={(e) => { setDiscountType(e.target.value); setDiscount(''); }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                           >
                             <option value="percentage">Percentage (%)</option>
@@ -541,7 +541,7 @@ const BillingAndPayment = ({ userRole }) => {
                   <div className="w-[340px] bg-[#022c22] text-white rounded-[40px] p-10 shadow-2xl relative translate-y-4 shrink-0">
                     <div className="space-y-4 opacity-70">
                       {(() => {
-                        const orderTotal = isEditingBill ? getEditedOrderTotal() : currentOrder.total;
+                        const orderTotal = isEditingBill ? getEditedOrderTotal() : currentOrder.subtotal || currentOrder.total;
                         const { subtotal, tax, service, discountAmount, total } = calculateTotals(orderTotal);
                         return (
                           <>
