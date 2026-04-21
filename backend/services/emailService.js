@@ -123,7 +123,43 @@ const sendUserCredentials = async (userEmail, username, password, role) => {
   }
 };
 
+const sendPasswordResetEmail = async (email, name, resetUrl) => {
+  try {
+    const transporter = createTransporter();
+    if (!transporter) {
+      console.log(`📧 Password reset link for ${email}: ${resetUrl}`);
+      return { success: false, error: 'Email not configured' };
+    }
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Smart Restro - Password Reset Request',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: #059669; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0;">Smart Restro</h1>
+          </div>
+          <div style="background-color: white; padding: 30px; border: 2px solid #059669; border-top: none; border-radius: 0 0 10px 10px;">
+            <h2>Hi ${name},</h2>
+            <p>You requested a password reset. Click the button below to set a new password:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetUrl}" style="background-color: #059669; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Reset Password</a>
+            </div>
+            <p style="color: #666; font-size: 13px;">This link expires in 1 hour. If you didn't request this, ignore this email.</p>
+          </div>
+        </div>
+      `
+    };
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (err) {
+    console.error('Password reset email failed:', err.message);
+    return { success: false, error: err.message };
+  }
+};
+
 module.exports = {
   sendCredentialsEmail: sendUserCredentials,
   sendUserCredentials,
+  sendPasswordResetEmail,
 };
