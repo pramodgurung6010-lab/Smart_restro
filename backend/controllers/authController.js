@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const { generateSecurePassword } = require('../utils/passwordGenerator');
-const { sendCredentialsEmail } = require('../services/emailService');
+const { sendCredentialsEmail, sendPasswordResetEmail } = require('../services/emailService');
 
 const login = async (req, res) => {
   const { username, password, role } = req.body;
@@ -169,4 +170,56 @@ const updateProfile = async (req, res) => {
   }
 };
 
-module.exports = { login, getUsers, createUser, updateUser, deleteUser, changePassword, getProfile, updateProfile };
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
+    if (!user) return res.status(404).json({ message: 'No account found with that email' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+    await user.save();
+
+    const resetUrl = `http://localhost:3001/reset-password?token=${token}`;
+    const result = await sendPasswordResetEmail(user.email, user.name || user.username, resetUrl);
+
+    if (!result.success) {
+      console.error('Email failed:', result.error);
+      // Still return the token in dev so it can be tested
+      return res.status(200).json({ 
+        message: 'Email could not be sent. Use this link to reset:',
+        resetUrl,
+        error: result.error
+      });
+    }
+
+    res.status(200).json({ message: 'Password reset link sent to your email' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const { token, newPassword } = req.body;
+  try {
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    if (!user) return res.status(400).json({ message: 'Invalid or expired reset token' });
+
+    user.password = newPassword;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successfully. You can now log in.' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { login, getUsers, createUser, updateUser, deleteUser, changePassword, getProfile, updateProfile, forgotPassword, resetPassword };
