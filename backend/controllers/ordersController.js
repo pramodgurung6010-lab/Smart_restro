@@ -129,6 +129,13 @@ const update = async (req, res) => {
       updateData.subtotal = subtotal;
       updateData.tax = Math.round(subtotal * 0.05 * 100) / 100;
       updateData.total = Math.round((subtotal + updateData.tax) * 100) / 100;
+
+      // Reset order status to PENDING so it goes back to kitchen
+      // only if there are new PENDING items
+      const hasNewPendingItems = orderItems.some(i => i.status === 'PENDING');
+      if (hasNewPendingItems) {
+        updateData.status = 'PENDING';
+      }
     }
 
     const updatedOrder = await Order.findByIdAndUpdate(id, updateData, { new: true, runValidators: true })

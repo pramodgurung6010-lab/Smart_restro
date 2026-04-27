@@ -128,7 +128,8 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
             menuItemId: item.menuItemId,
             quantity: item.quantity,
             specialInstructions: item.specialInstructions || '',
-            status: item.status || 'PENDING'
+            // Keep existing served items as SERVED, only new items go to PENDING
+            status: item.isExisting ? (item.status || 'SERVED') : 'PENDING'
           }))
         });
         showMessage('success', 'Order updated!');

@@ -97,7 +97,7 @@ const TableMap = ({ onSelectTable }) => {
           
           const activeOrder = backendOrders.find(order => 
             order.tableId === table.id && 
-            !['SERVED', 'CANCELLED', 'PAID'].includes(order.status) &&
+            !['CANCELLED', 'PAID'].includes(order.status) &&
             !order.isPaid
           );
           

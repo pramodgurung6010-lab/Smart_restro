@@ -15,9 +15,11 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Add request logging
+// Add request logging — only log non-GET requests to reduce polling noise
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} - ${new Date().toISOString()}`);
+  if (req.method !== 'GET') {
+    console.log(`${req.method} ${req.path} - ${new Date().toISOString()}`);
+  }
   next();
 });
 
