@@ -277,11 +277,20 @@ const BillingAndPayment = ({ userRole }) => {
     autoTable(doc, {
       startY: y,
       head: [['Item', 'Qty', 'Price', 'Total']],
-      body: currentOrder.items.map(item => [
-        item.name, item.quantity,
-        `Rs.${item.price.toFixed(2)}`,
-        `Rs.${(item.price * item.quantity).toFixed(2)}`
-      ]),
+      body: (() => {
+        const grouped = [];
+        currentOrder.items.forEach(item => {
+          const menuId = item.menuItem?._id || item.menuItem || item.name;
+          const existing = grouped.find(g => g.menuId === menuId);
+          if (existing) { existing.quantity += item.quantity; }
+          else grouped.push({ ...item, menuId });
+        });
+        return grouped.map(item => [
+          item.name, item.quantity,
+          `Rs.${item.price.toFixed(2)}`,
+          `Rs.${(item.price * item.quantity).toFixed(2)}`
+        ]);
+      })(),
       styles: { fontSize: 7, cellPadding: 1.5 },
       headStyles: { fillColor: [5, 150, 105], fontSize: 7 },
       columnStyles: { 0: { cellWidth: 28 }, 1: { cellWidth: 8 }, 2: { cellWidth: 18 }, 3: { cellWidth: 18 } },
@@ -432,7 +441,21 @@ const BillingAndPayment = ({ userRole }) => {
                     <div className="col-span-2 text-right">Total</div>
                   </div>
                   <div className="space-y-5">
-                    {currentOrder.items.map((item, idx) => {
+                    {/* Group items by menuItemId for billing display */}
+                    {(() => {
+                      const grouped = [];
+                      currentOrder.items.forEach((item, idx) => {
+                        const menuId = item.menuItem?._id || item.menuItem || item.menuItemId || item.name;
+                        const existing = grouped.find(g => g.menuId === menuId);
+                        if (existing) {
+                          existing.quantity += item.quantity;
+                          existing.indices.push(idx);
+                        } else {
+                          grouped.push({ ...item, menuId, quantity: item.quantity, indices: [idx] });
+                        }
+                      });
+                      return grouped;
+                    })().map((item, idx) => {
                       const itemKey = item._id || item.id || idx;
                       const editedItem = editedItems[itemKey];
                       const displayQuantity = editedItem?.quantity ?? item.quantity;

@@ -83,21 +83,16 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
   );
 
   const addToCart = (item) => {
-    setCart(prev => {
-      const existing = prev.find(i => i.menuItemId === item.id);
-      if (existing) {
-        return prev.map(i => i.menuItemId === item.id ? { ...i, quantity: i.quantity + 1 } : i);
-      }
-      return [...prev, {
-        id: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        menuItemId: item.id,
-        name: item.name,
-        quantity: 1,
-        price: item.price,
-        status: OrderStatus.PENDING,
-        isExisting: false
-      }];
-    });
+    // Each click adds a separate row (quantity 1) so kitchen can track individually
+    setCart(prev => [...prev, {
+      id: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      menuItemId: item.id,
+      name: item.name,
+      quantity: 1,
+      price: item.price,
+      status: OrderStatus.PENDING,
+      isExisting: false
+    }]);
   };
 
   const updateQuantity = (menuItemId, delta) => {
