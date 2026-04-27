@@ -249,15 +249,7 @@ const KitchenDisplay = ({ role }) => {
           return (
             <div 
               key={order.id} 
-              className={`bg-white rounded-2xl border-t-8 shadow-lg overflow-hidden flex flex-col transition-all hover:shadow-xl ${
-                order.status === 'SERVED'
-                  ? 'border-gray-400'
-                  : order.status === 'READY'
-                  ? 'border-emerald-500'
-                  : order.status === 'PREPARING'
-                  ? 'border-blue-500'
-                  : 'border-orange-500'
-              }`}
+              className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col transition-all hover:shadow-xl border border-gray-100"
             >
               <div className="p-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
                 <div className="flex-1">
