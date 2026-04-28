@@ -27,7 +27,7 @@ const AdminDashboard = () => {
       if (isInitial) setLoading(true);
       
       // Fetch orders
-      const ordersResponse = await api.get('/orders');
+      const ordersResponse = await api.get('/orders?limit=1000');
       const allOrders = ordersResponse.data.orders;
       
       // Calculate stats

@@ -22,7 +22,7 @@ const ReportsPage = () => {
     const fetchOrders = async () => {
       try {
         const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-        const response = await axios.get('http://localhost:5002/api/orders', {
+        const response = await axios.get('http://localhost:5002/api/orders?limit=1000', {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         const backendOrders = (response.data.orders || []).map(o => ({
