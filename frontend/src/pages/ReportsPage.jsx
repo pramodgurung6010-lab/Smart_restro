@@ -10,6 +10,10 @@ const ReportsPage = () => {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportHistory, setReportHistory] = useState([]);
   const [settlementFilter, setSettlementFilter] = useState('ALL');
+  // eslint-disable-next-line no-unused-vars
+  const [logPage, setLogPage] = useState(1);
+  // eslint-disable-next-line no-unused-vars
+  const LOG_PAGE_SIZE = 10;
 
   const startInputRef = useRef(null);
   const endInputRef = useRef(null);
@@ -297,7 +301,7 @@ const ReportsPage = () => {
               {['ALL', 'SETTLED', 'UNPAID'].map(f => (
                 <button
                   key={f}
-                  onClick={() => setSettlementFilter(f)}
+                  onClick={() => { setSettlementFilter(f); setLogPage(1); }}
                   className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                     settlementFilter === f
                       ? f === 'SETTLED' ? 'bg-emerald-600 text-white shadow'
@@ -325,10 +329,12 @@ const ReportsPage = () => {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {(() => {
-                const display = filteredOrders
+                const allFiltered = filteredOrders
                   .slice()
                   .reverse()
                   .filter(o => settlementFilter === 'ALL' || (settlementFilter === 'SETTLED' ? o.isPaid : !o.isPaid));
+                const totalPages = Math.ceil(allFiltered.length / LOG_PAGE_SIZE);
+                const display = allFiltered.slice((logPage - 1) * LOG_PAGE_SIZE, logPage * LOG_PAGE_SIZE);
                 return display.length > 0 ? display.map((order) => (
                   <tr key={order.id} className="hover:bg-emerald-50/20 transition-colors group">
                     <td className="px-10 py-5 font-bold text-gray-900">#ORD-{order.id.slice(-6).toUpperCase()}</td>
@@ -348,6 +354,46 @@ const ReportsPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {(() => {
+          const allFiltered = filteredOrders
+            .filter(o => settlementFilter === 'ALL' || (settlementFilter === 'SETTLED' ? o.isPaid : !o.isPaid));
+          const totalPages = Math.ceil(allFiltered.length / LOG_PAGE_SIZE);
+          if (totalPages <= 1) return null;
+          return (
+            <div className="px-8 py-4 border-t border-gray-100 flex items-center justify-between">
+              <p className="text-xs text-gray-400">
+                Showing {((logPage - 1) * LOG_PAGE_SIZE) + 1}–{Math.min(logPage * LOG_PAGE_SIZE, allFiltered.length)} of {allFiltered.length} orders
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setLogPage(p => Math.max(1, p - 1))}
+                  disabled={logPage === 1}
+                  className="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-50 text-gray-500 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-30 transition-all"
+                >
+                  ← Prev
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setLogPage(p)}
+                    className={`w-8 h-8 text-xs font-bold rounded-lg transition-all ${logPage === p ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-500 hover:bg-emerald-50 hover:text-emerald-700'}`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setLogPage(p => Math.min(totalPages, p + 1))}
+                  disabled={logPage === totalPages}
+                  className="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-50 text-gray-500 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-30 transition-all"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
