@@ -278,14 +278,13 @@ const KitchenDisplay = ({ role }) => {
                     const displayStatus = item.status;
                     return (
                       <div key={idx} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-emerald-700 bg-white border border-emerald-100 px-1.5 py-0.5 rounded-lg shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-2">
+                            <span className="text-xs font-black text-emerald-700 bg-white border border-emerald-100 px-1.5 py-0.5 rounded-lg shadow-sm shrink-0 mt-0.5">
                               {item.quantity}×
                             </span>
                             <p className="font-bold text-gray-900 text-sm leading-tight">{item.name}</p>
                           </div>
-                          
                           <button
                             onClick={() => {
                               const nextStatus = getNextStage(displayStatus);
@@ -294,7 +293,7 @@ const KitchenDisplay = ({ role }) => {
                               }
                             }}
                             disabled={isReadOnly || displayStatus === 'SERVED'}
-                            className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${
+                            className={`shrink-0 px-3 py-1.5 text-xs font-black rounded-lg transition-all whitespace-nowrap ${
                               displayStatus === 'PENDING'
                                 ? 'bg-orange-600 text-white hover:bg-orange-700'
                                 : displayStatus === 'PREPARING'
