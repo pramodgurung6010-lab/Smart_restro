@@ -8,13 +8,11 @@ import {
   Banknote, 
   CheckCircle, 
   Clock, 
-  Download,
-  History
+  Download
 } from 'lucide-react';
 
 const BillingAndPayment = ({ userRole }) => {
   const [selectedTableId, setSelectedTableId] = useState(null);
-  const [view, setView] = useState('PENDING');
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [discount, setDiscount] = useState('');
@@ -341,20 +339,6 @@ const BillingAndPayment = ({ userRole }) => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Billing Center</h1>
           <p className="text-sm text-gray-500 mt-1">Manage settlements and history</p>
-        </div>
-        <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
-          <button 
-            onClick={() => setView('PENDING')}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-bold transition-all ${view === 'PENDING' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' : 'text-gray-400 hover:bg-gray-50'}`}
-          >
-            <Clock size={16} /> Active Bills
-          </button>
-          <button 
-            onClick={() => setView('HISTORY')}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-bold transition-all ${view === 'HISTORY' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' : 'text-gray-400 hover:bg-gray-50'}`}
-          >
-            <History size={16} /> Payment History
-          </button>
         </div>
       </div>
 
