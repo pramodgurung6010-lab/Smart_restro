@@ -49,6 +49,14 @@ const UserManagement = () => {
       return;
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       
@@ -336,7 +344,7 @@ const UserManagement = () => {
                   value={formData.phoneNumber} 
                   onChange={e => setFormData({...formData, phoneNumber: e.target.value})} 
                   className="w-full mt-1.5 px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-bold" 
-                  placeholder="+1 (555) 000-0000" 
+                  placeholder="+977 0000000000" 
                 />
               </div>
             </div>

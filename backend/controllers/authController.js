@@ -41,6 +41,11 @@ const getUsers = async (req, res) => {
 const createUser = async (req, res) => {
   const { username, email, role, name, phoneNumber } = req.body;
   try {
+    // Validate email format — require at least 2 chars after the dot
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
     const existingUser = await User.findOne({
       $or: [
         { username: { $regex: new RegExp(`^${username}$`, 'i') } },
