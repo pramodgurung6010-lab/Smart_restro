@@ -49,10 +49,20 @@ const UserManagement = () => {
       return;
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
+    // Validate email format — require 2+ chars after dot, proper domain structure
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const domain = formData.email.split('@')[1] || '';
+    const tld = domain.split('.').pop() || '';
+    if (!emailRegex.test(formData.email) || tld.length < 2) {
+      setError('Please enter a valid email address (e.g. name@gmail.com)');
+      setLoading(false);
+      return;
+    }
+    // Warn about suspicious domains
+    const knownDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com'];
+    const domainLower = domain.toLowerCase();
+    if (domainLower.startsWith('gmail.') && domainLower !== 'gmail.com') {
+      setError('Did you mean @gmail.com? Please check the email address.');
       setLoading(false);
       return;
     }
@@ -330,9 +340,16 @@ const UserManagement = () => {
                   type="email" 
                   value={formData.email} 
                   onChange={e => setFormData({...formData, email: e.target.value})} 
-                  className="w-full mt-1.5 px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-bold" 
+                  className={`w-full mt-1.5 px-5 py-3.5 bg-gray-50 border rounded-2xl focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-bold ${
+                    formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email)
+                      ? 'border-red-300 bg-red-50'
+                      : 'border-gray-100'
+                  }`}
                   required
                 />
+                {formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email) && (
+                  <p className="text-xs text-red-500 mt-1 font-bold">⚠️ Invalid email — must be like name@gmail.com</p>
+                )}
               </div>
               
               <div>
