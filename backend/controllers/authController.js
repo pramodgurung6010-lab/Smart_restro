@@ -49,13 +49,17 @@ const createUser = async (req, res) => {
     const existingUser = await User.findOne({
       $or: [
         { username: { $regex: new RegExp(`^${username}$`, 'i') } },
-        { email: { $regex: new RegExp(`^${email}$`, 'i') } }
+        { email: { $regex: new RegExp(`^${email}$`, 'i') } },
+        ...(phoneNumber ? [{ phoneNumber }] : [])
       ]
     });
     if (existingUser) {
       return res.status(400).json({
         message: existingUser.username.toLowerCase() === username.toLowerCase()
-          ? 'Username already exists' : 'Email already exists'
+          ? 'Username already exists'
+          : existingUser.email.toLowerCase() === email.toLowerCase()
+          ? 'Email already exists'
+          : 'Phone number already exists'
       });
     }
 

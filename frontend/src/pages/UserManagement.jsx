@@ -67,6 +67,26 @@ const UserManagement = () => {
       return;
     }
 
+    // Validate phone number — exactly 10 digits after +977
+    if (formData.phoneNumber) {
+      const digits = formData.phoneNumber.replace(/^\+?977/, '').replace(/\D/g, '');
+      if (digits.length !== 10) {
+        setError('Phone number must be exactly 10 digits (e.g. 9812345678)');
+        setLoading(false);
+        return;
+      }
+      // Check phone uniqueness against existing users
+      const phoneExists = users.some(u => 
+        u.phoneNumber === formData.phoneNumber && 
+        (!editingUser || u._id !== editingUser._id)
+      );
+      if (phoneExists) {
+        setError('Phone number already exists');
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const token = localStorage.getItem('token');
       
@@ -239,7 +259,10 @@ const UserManagement = () => {
                   </p>
                   <p className="flex items-center gap-2 mt-1 font-bold text-gray-900">
                     <Phone size={12} className="text-emerald-500" /> 
-                    {user.phoneNumber || '—'}
+                    {user.phoneNumber 
+                      ? (user.phoneNumber.startsWith('+977') ? user.phoneNumber : `+977${user.phoneNumber}`)
+                      : '—'
+                    }
                   </p>
                 </td>
                 <td className="px-8 py-5 font-mono text-sm text-gray-400 font-bold">@{user.username}</td>
@@ -340,29 +363,29 @@ const UserManagement = () => {
                   type="email" 
                   value={formData.email} 
                   onChange={e => setFormData({...formData, email: e.target.value})} 
-                  className={`w-full mt-1.5 px-5 py-3.5 bg-gray-50 border rounded-2xl focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-bold ${
-                    formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email)
-                      ? 'border-red-300 bg-red-50'
-                      : 'border-gray-100'
-                  }`}
+                  className="w-full mt-1.5 px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-bold"
                   required
                 />
-                {formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email) && (
-                  <p className="text-xs text-red-500 mt-1 font-bold">⚠️ Invalid email — must be like name@gmail.com</p>
-                )}
               </div>
               
               <div>
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                   <Phone size={12} /> Phone Number
                 </label>
-                <input 
-                  type="tel" 
-                  value={formData.phoneNumber} 
-                  onChange={e => setFormData({...formData, phoneNumber: e.target.value})} 
-                  className="w-full mt-1.5 px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-bold" 
-                  placeholder="+977 0000000000" 
-                />
+                <div className="flex mt-1.5">
+                  <span className="px-4 py-3.5 bg-gray-100 border border-gray-100 rounded-l-2xl font-bold text-gray-600 text-sm shrink-0">+977</span>
+                  <input 
+                    type="tel"
+                    value={formData.phoneNumber.replace(/^\+?977/, '')}
+                    onChange={e => {
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setFormData({...formData, phoneNumber: `+977${digits}`});
+                    }}
+                    className="flex-1 px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-r-2xl focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-bold"
+                    placeholder="0000000000"
+                    maxLength={10}
+                  />
+                </div>
               </div>
             </div>
             
