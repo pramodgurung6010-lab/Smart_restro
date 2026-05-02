@@ -164,12 +164,20 @@ const ProfileSettings = ({ user, onUpdate, onLogout }) => {
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Phone Number</label>
-              <input 
-                type="tel" 
-                value={formData.phoneNumber} 
-                onChange={e => setFormData({...formData, phoneNumber: e.target.value})} 
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" 
-              />
+              <div className="flex">
+                <span className="px-3 py-3 bg-gray-100 border border-gray-100 rounded-l-xl font-bold text-gray-600 text-sm shrink-0">+977</span>
+                <input 
+                  type="tel"
+                  value={formData.phoneNumber.replace(/^\+?977/, '')}
+                  onChange={e => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData({...formData, phoneNumber: `+977${digits}`});
+                  }}
+                  className="flex-1 px-4 py-3 bg-gray-50 border border-gray-100 rounded-r-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                  placeholder="9812345678"
+                  maxLength={10}
+                />
+              </div>
             </div>
           </div>
         </div>

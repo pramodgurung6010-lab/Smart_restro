@@ -208,7 +208,10 @@ const TopBar = ({ user, onLogout, onNavigate, notifications = [], onClearNotific
                     </div>
                     <div className="flex items-center gap-3 text-[11px] text-gray-500 font-medium">
                       <Phone size={14} className="text-emerald-500" />
-                      {user.phoneNumber || 'No phone set'}
+                      {user.phoneNumber 
+                        ? (user.phoneNumber.startsWith('+977') ? user.phoneNumber : `+977${user.phoneNumber}`)
+                        : 'No phone set'
+                      }
                     </div>
                   </div>
                 </div>
