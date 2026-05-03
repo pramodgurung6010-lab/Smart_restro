@@ -128,6 +128,11 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
           }))
         });
         showMessage('success', 'Order updated!');
+        // Write notification BEFORE navigating away
+        const n1 = { id: Date.now(), title: `🍽️ New Order — Table ${table.number}`, message: `${cart.length} item(s) sent to kitchen`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), read: false };
+        const prev1 = (() => { try { return JSON.parse(localStorage.getItem('smartRestroNotifications') || '[]'); } catch { return []; } })();
+        localStorage.setItem('smartRestroNotifications', JSON.stringify([n1, ...prev1].slice(0, 20)));
+        window.dispatchEvent(new CustomEvent('newOrder', { detail: { tableNumber: table.number, itemCount: cart.length } }));
         onSubmitOrder(response.data.order);
       } else {
         // Create new order
@@ -141,6 +146,11 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
           }))
         });
         showMessage('success', 'Order submitted to kitchen!');
+        // Write notification BEFORE navigating away
+        const n2 = { id: Date.now(), title: `🍽️ New Order — Table ${table.number}`, message: `${cart.length} item(s) sent to kitchen`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), read: false };
+        const prev2 = (() => { try { return JSON.parse(localStorage.getItem('smartRestroNotifications') || '[]'); } catch { return []; } })();
+        localStorage.setItem('smartRestroNotifications', JSON.stringify([n2, ...prev2].slice(0, 20)));
+        window.dispatchEvent(new CustomEvent('newOrder', { detail: { tableNumber: table.number, itemCount: cart.length } }));
         onSubmitOrder(response.data.order);
       }
       
