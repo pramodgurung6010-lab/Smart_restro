@@ -73,9 +73,7 @@ const KitchenDisplay = ({ role }) => {
       setTimeout(() => {
         setJustServedOrderIds((prev) => prev.filter((id) => id !== normalizedOrderId));
       }, 3500);
-    }
-
-    // Immediate local update so the click always feels responsive
+    }    // Immediate local update so the click always feels responsive
     setOrders((prev) =>
       prev.map((order) => {
         if (order.id !== normalizedOrderId) return order;

@@ -1,11 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, Search, Calendar, ChevronDown, LogOut, Phone, Mail, X, Menu } from 'lucide-react';
 
-const TopBar = ({ user, onLogout, onNavigate, notifications = [], onClearNotification, onMenuToggle }) => {
+const NOTIF_KEY = 'smartRestroNotifications';
+
+const TopBar = ({ user, onLogout, onNavigate, onClearNotification, onMenuToggle }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [notifications, setNotifications] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]'); } catch { return []; }
+  });
+
+  // Poll localStorage every 500ms for new notifications
+  useEffect(() => {
+    const interval = setInterval(() => {
+      try {
+        const stored = JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]');
+        setNotifications(prev => {
+          if (stored.length !== prev.length || stored[0]?.id !== prev[0]?.id) {
+            return [...stored];
+          }
+          return prev;
+        });
+      } catch {}
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleClearNotification = (id) => {
+    try {
+      const updated = notifications.filter(n => n.id !== id);
+      localStorage.setItem(NOTIF_KEY, JSON.stringify(updated));
+      setNotifications([...updated]);
+    } catch {}
+  };
 
   const today = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
@@ -94,7 +123,16 @@ const TopBar = ({ user, onLogout, onNavigate, notifications = [], onClearNotific
         {/* Notifications */}
         <div className="relative">
           <button 
-            onClick={() => setShowNotifications(!showNotifications)}
+            onClick={() => {
+              const opening = !showNotifications;
+              setShowNotifications(opening);
+              // Mark all as read when opening
+              if (opening && notifications.some(n => !n.read)) {
+                const updated = notifications.map(n => ({ ...n, read: true }));
+                localStorage.setItem(NOTIF_KEY, JSON.stringify(updated));
+                setNotifications([...updated]);
+              }
+            }}
             className="relative p-2 text-gray-400 hover:text-emerald-600 transition-all"
           >
             <Bell size={18} />
@@ -150,7 +188,7 @@ const TopBar = ({ user, onLogout, onNavigate, notifications = [], onClearNotific
                           </div>
                           {!notification.read && (
                             <button
-                              onClick={() => onClearNotification && onClearNotification(notification.id)}
+                              onClick={() => handleClearNotification(notification.id)}
                               className="p-1 hover:bg-white rounded-lg transition-colors"
                             >
                               <X size={12} />
