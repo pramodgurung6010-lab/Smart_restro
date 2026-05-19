@@ -69,7 +69,7 @@ mongoose
       });
       
       await defaultAdmin.save();
-      console.log('✅ Default admin user created: admin100/admin123');
+      console.log('✅ Default admin user created (admin100)');
     } else {
       console.log('ℹ️  Admin user already exists');
     }

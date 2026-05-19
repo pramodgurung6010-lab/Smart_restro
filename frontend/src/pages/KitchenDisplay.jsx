@@ -34,10 +34,11 @@ const KitchenDisplay = ({ role }) => {
     return user.token;
   };
 
-  // API configuration
-  const api = axios.create({
-    baseURL: 'http://localhost:5002/api',
-    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+  // API configuration — use interceptor so token is always fresh per request
+  const api = axios.create({ baseURL: 'http://localhost:5002/api' });
+  api.interceptors.request.use(config => {
+    config.headers['Authorization'] = `Bearer ${getAuthToken()}`;
+    return config;
   });
 
   // Fetch orders from backend
@@ -167,6 +168,7 @@ const KitchenDisplay = ({ role }) => {
   const getNextStage = (status) => {
     switch (status) {
       case 'PENDING':
+      case 'CONFIRMED':   // treat CONFIRMED same as PENDING → move to PREPARING
         return 'PREPARING';
       case 'PREPARING':
         return 'READY';

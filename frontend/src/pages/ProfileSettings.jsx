@@ -13,7 +13,8 @@ const ProfileSettings = ({ user, onUpdate, onLogout }) => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const token = currentUser.token;
         const response = await axios.get('http://localhost:5002/api/auth/profile', {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -47,7 +48,8 @@ const ProfileSettings = ({ user, onUpdate, onLogout }) => {
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      const token = currentUser.token;
       const response = await axios.put('http://localhost:5002/api/auth/profile', {
         name: formData.name,
         email: formData.email,
@@ -102,6 +104,8 @@ const ProfileSettings = ({ user, onUpdate, onLogout }) => {
 
       setPasswordSuccess(true);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      // Clear all auth data so the user is fully logged out before reload
+      localStorage.removeItem('token');
       localStorage.removeItem('currentUser');
       localStorage.removeItem('activeTab');
       window.location.reload();

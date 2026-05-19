@@ -6,6 +6,7 @@ export const UserRole = {
 
 export const OrderStatus = {
   PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
   PREPARING: 'PREPARING',
   READY: 'READY',
   SERVED: 'SERVED',

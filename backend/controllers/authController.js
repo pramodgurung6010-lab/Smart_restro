@@ -102,13 +102,17 @@ const updateUser = async (req, res) => {
       _id: { $ne: id },
       $or: [
         { username: { $regex: new RegExp(`^${username}$`, 'i') } },
-        { email: { $regex: new RegExp(`^${email}$`, 'i') } }
+        { email: { $regex: new RegExp(`^${email}$`, 'i') } },
+        ...(phoneNumber ? [{ phoneNumber }] : [])
       ]
     });
     if (existingUser) {
       return res.status(400).json({
         message: existingUser.username.toLowerCase() === username.toLowerCase()
-          ? 'Username already exists' : 'Email already exists'
+          ? 'Username already exists'
+          : existingUser.email.toLowerCase() === email.toLowerCase()
+          ? 'Email already exists'
+          : 'Phone number already exists'
       });
     }
 
@@ -195,12 +199,15 @@ const forgotPassword = async (req, res) => {
 
     if (!result.success) {
       console.error('Email failed:', result.error);
-      // Still return the token in dev so it can be tested
-      return res.status(200).json({ 
-        message: 'Email could not be sent. Use this link to reset:',
-        resetUrl,
-        error: result.error
-      });
+      // Only expose the reset URL in development to avoid token leakage in production
+      if (process.env.NODE_ENV !== 'production') {
+        return res.status(200).json({ 
+          message: 'Email could not be sent. Use this link to reset (dev only):',
+          resetUrl,
+          error: result.error
+        });
+      }
+      return res.status(500).json({ message: 'Failed to send password reset email. Please try again later.' });
     }
 
     res.status(200).json({ message: 'Password reset link sent to your email' });

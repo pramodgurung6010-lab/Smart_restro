@@ -43,8 +43,7 @@ const LoginPage = ({ onLogin }) => {
       }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to send reset email';
-      const status = err.response?.status;
-      setFpMessage(`Error ${status || ''}: ${msg}`);
+      setFpMessage(msg);
     } finally {
       setLoading(false);
     }
@@ -125,7 +124,7 @@ const LoginPage = ({ onLogin }) => {
     }
   };
 
-  // Load remembered user on component mount
+  // Load remembered user on component mount — restore username only, not checkbox
   React.useEffect(() => {
     const remembered = localStorage.getItem('rememberedUser');
     if (remembered) {
@@ -133,7 +132,7 @@ const LoginPage = ({ onLogin }) => {
         const userData = JSON.parse(remembered);
         setUsername(userData.username);
         setRole(userData.role);
-        setRememberMe(true);
+        // Don't restore rememberMe checkbox — user must re-check it each session
       } catch (e) {
         localStorage.removeItem('rememberedUser');
       }
@@ -142,7 +141,7 @@ const LoginPage = ({ onLogin }) => {
 
   const roles = [
     { id: UserRole.ADMIN, label: 'Administrator' },
-    { id: UserRole.WAITER, label: 'Waiter / Staff' },
+    { id: UserRole.WAITER, label: 'Waiter' },
     { id: UserRole.KITCHEN, label: 'Kitchen Crew' },
   ];
 

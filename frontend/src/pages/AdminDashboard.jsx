@@ -3,7 +3,7 @@ import axios from 'axios';
 import { DollarSign, Clock, CheckCircle, Users, Loader } from 'lucide-react';
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState({ revenue: 0, activeOrders: 0, completedOrdersCount: 0, availableTables: 0 });
+  const [stats, setStats] = useState({ revenue: 0, activeOrders: 0, completedOrdersCount: 0, availableTables: 0, totalTables: 0 });
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -13,12 +13,11 @@ const AdminDashboard = () => {
     return user.token;
   };
 
-  // API configuration
-  const api = axios.create({
-    baseURL: 'http://localhost:5002/api',
-    headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
-    }
+  // API configuration — use interceptor so token is always fresh per request
+  const api = axios.create({ baseURL: 'http://localhost:5002/api' });
+  api.interceptors.request.use(config => {
+    config.headers['Authorization'] = `Bearer ${getAuthToken()}`;
+    return config;
   });
 
   // Fetch dashboard data
@@ -50,11 +49,25 @@ const AdminDashboard = () => {
         order.status === 'SERVED'
       ).length;
       
+      let availableTables = 0;
+      let totalTables = 0;
+      try {
+        const tableState = JSON.parse(localStorage.getItem('tableMapState') || '[]');
+        const visible = tableState.filter(t => {
+          if (t.status === 'MERGED') return false;
+          if (t.isSplit && tableState.some(x => x.parentId === t.id)) return false;
+          return true;
+        });
+        totalTables = visible.length;
+        availableTables = visible.filter(t => t.status === 'AVAILABLE').length;
+      } catch (e) {}
+
       setStats({
         revenue,
         activeOrders,
         completedOrdersCount,
-        availableTables: 0 // This would need table data
+        availableTables,
+        totalTables
       });
       
       setOrders(allOrders.slice(-5).reverse());

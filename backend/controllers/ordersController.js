@@ -354,9 +354,12 @@ const splitBill = async (req, res) => {
 
 const getUnpaidOrders = async (req, res) => {
   try {
+    // Use a single populate call — no need to call populateOrder again after .populate()
     const unpaidOrders = await Order.find({ isPaid: false, status: { $ne: 'CANCELLED' } })
-      .populate('waiter', 'name username').sort({ createdAt: -1 }).lean();
-    for (let order of unpaidOrders) await populateOrder(order);
+      .populate('waiter', 'name username')
+      .populate('items.menuItem', 'name category price')
+      .sort({ createdAt: -1 })
+      .lean();
     res.status(200).json({ count: unpaidOrders.length, orders: unpaidOrders });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

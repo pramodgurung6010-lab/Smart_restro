@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { OrderStatus } from '../types';
-import { CATEGORIES } from '../constants';import { ChevronLeft, Plus, Minus, Send, ShoppingCart, Loader } from 'lucide-react';
+import { CATEGORIES } from '../constants';
+import { ChevronLeft, Plus, Minus, Send, ShoppingCart, Loader } from 'lucide-react';
 
 const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
   const [activeCategory, setActiveCategory] = useState('All');
@@ -17,12 +18,11 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
     return user.token;
   };
 
-  // API configuration
-  const api = axios.create({
-    baseURL: 'http://localhost:5002/api',
-    headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
-    }
+  // API configuration — use interceptor so token is always fresh per request
+  const api = axios.create({ baseURL: 'http://localhost:5002/api' });
+  api.interceptors.request.use(config => {
+    config.headers['Authorization'] = `Bearer ${getAuthToken()}`;
+    return config;
   });
 
   // Fetch menu items and existing order (if any)
@@ -95,9 +95,11 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
     }]);
   };
 
-  const updateQuantity = (menuItemId, delta) => {
+  // Update quantity by unique cart row id (not menuItemId) to avoid
+  // updating all rows when the same item appears multiple times
+  const updateQuantity = (rowId, delta) => {
     setCart(prev => prev.map(i => {
-      if (i.menuItemId === menuItemId) {
+      if (i.id === rowId) {
         const newQty = Math.max(0, i.quantity + delta);
         return { ...i, quantity: newQty };
       }
@@ -264,9 +266,9 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
                       <p className="text-xs text-emerald-600 font-bold font-mono mt-1">Rs.{item.price.toFixed(2)}</p>
                     </div>
                     <div className="flex items-center gap-3 bg-white rounded-2xl p-1 border border-gray-100 shadow-sm">
-                      <button onClick={() => updateQuantity(item.menuItemId, -1)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Minus size={14}/></button>
+                      <button onClick={() => updateQuantity(item.id, -1)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Minus size={14}/></button>
                       <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.menuItemId, 1)} className="p-1.5 text-gray-400 hover:text-emerald-600 transition-colors"><Plus size={14}/></button>
+                      <button onClick={() => updateQuantity(item.id, 1)} className="p-1.5 text-gray-400 hover:text-emerald-600 transition-colors"><Plus size={14}/></button>
                     </div>
                   </div>
                 ))}

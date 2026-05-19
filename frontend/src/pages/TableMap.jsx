@@ -43,12 +43,11 @@ const TableMap = ({ onSelectTable }) => {
     return user.token;
   };
 
-  // API configuration
-  const api = axios.create({
-    baseURL: 'http://localhost:5002/api',
-    headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
-    }
+  // API configuration — use interceptor so token is always fresh per request
+  const api = axios.create({ baseURL: 'http://localhost:5002/api' });
+  api.interceptors.request.use(config => {
+    config.headers['Authorization'] = `Bearer ${getAuthToken()}`;
+    return config;
   });
 
   // Save merge/split state to localStorage whenever tables change
@@ -210,9 +209,11 @@ const TableMap = ({ onSelectTable }) => {
     if (!fromTable?.currentOrderId) return;
 
     try {
-      // Update order's table in backend
+      const toTable = tables.find(t => t.id === toTableId);
+      // Update order's table in backend — include tableNumber (required field)
       await api.put(`/orders/${fromTable.currentOrderId}`, {
-        tableId: toTableId
+        tableId: toTableId,
+        tableNumber: toTable?.number || toTableId
       });
 
       // Update local state

@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   LayoutDashboard, 
   Utensils, 
-  Table as TableIcon, 
+  LayoutGrid as TableIcon, 
   Receipt,
   ClipboardList,
   BarChart3, 

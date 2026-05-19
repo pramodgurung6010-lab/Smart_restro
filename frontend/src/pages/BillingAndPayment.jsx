@@ -30,12 +30,11 @@ const BillingAndPayment = ({ userRole }) => {
     return user.token;
   };
 
-  // API configuration
-  const api = axios.create({
-    baseURL: 'http://localhost:5002/api',
-    headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
-    }
+  // API configuration — use interceptor so token is always fresh per request
+  const api = axios.create({ baseURL: 'http://localhost:5002/api' });
+  api.interceptors.request.use(config => {
+    config.headers['Authorization'] = `Bearer ${getAuthToken()}`;
+    return config;
   });
 
   // Fetch all orders and build table list
@@ -88,6 +87,8 @@ const BillingAndPayment = ({ userRole }) => {
   const currentOrder = orders.find(o => o.id === currentTable?.currentOrderId);
 
   const calculateTotals = (sub) => {
+    // Service charge is included in the backend total (tax only = 5%)
+    // We display it separately for transparency but the stored total matches
     const tax = Number((sub * 0.05).toFixed(2));
     const service = Number((sub * 0.10).toFixed(2));
     const subtotalWithTaxService = sub + tax + service;
@@ -142,7 +143,7 @@ const BillingAndPayment = ({ userRole }) => {
     try {
       setLoading(true);
       const updatedItems = currentOrder.items.map((item, idx) => {
-        const itemKey = item._id || item.id || idx;
+        const itemKey = item._id || item.id || `idx-${idx}`;
         const edited = editedItems[itemKey];
         return {
           menuItemId: item.menuItem?._id || item.menuItem,
@@ -177,7 +178,7 @@ const BillingAndPayment = ({ userRole }) => {
       // If bill was edited, save the updated items to backend first
       if (isEditingBill && Object.keys(editedItems).length > 0) {
         const updatedItems = currentOrder.items.map((item, idx) => {
-          const itemKey = item._id || item.id || idx;
+          const itemKey = item._id || item.id || `idx-${idx}`;
           const edited = editedItems[itemKey];
           return {
             menuItemId: item.menuItem?._id || item.menuItem,
@@ -435,12 +436,14 @@ const BillingAndPayment = ({ userRole }) => {
                           existing.quantity += item.quantity;
                           existing.indices.push(idx);
                         } else {
-                          grouped.push({ ...item, menuId, quantity: item.quantity, indices: [idx] });
+                          // Use the original item's own _id/id as the key so editedItems lookups
+                          // in saveEdits (which iterates currentOrder.items) stay consistent
+                          grouped.push({ ...item, menuId, quantity: item.quantity, indices: [idx], _rowKey: item._id || item.id || `idx-${idx}` });
                         }
                       });
                       return grouped;
-                    })().map((item, idx) => {
-                      const itemKey = item._id || item.id || idx;
+                    })().map((item) => {
+                      const itemKey = item._rowKey;
                       const editedItem = editedItems[itemKey];
                       const displayQuantity = editedItem?.quantity ?? item.quantity;
                       const displayPrice = editedItem?.price ?? item.price;
@@ -575,13 +578,13 @@ const BillingAndPayment = ({ userRole }) => {
 
               <div className="p-10 bg-gray-50/50 border-t border-gray-100">
                 <button 
-                  disabled={!paymentMethod || loading || currentOrder?.status !== 'SERVED'}
+                  disabled={!paymentMethod || loading || !['SERVED', 'READY'].includes(currentOrder?.status)}
                   onClick={handlePay}
                   className={`w-full py-6 rounded-[32px] font-bold text-lg transition-all shadow-xl active:scale-[0.98] ${
-                    paymentMethod && !loading && currentOrder?.status === 'SERVED' ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    paymentMethod && !loading && ['SERVED', 'READY'].includes(currentOrder?.status) ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  {loading ? 'PROCESSING...' : currentOrder?.status !== 'SERVED' ? 'ORDER NOT SERVED YET' : paymentMethod ? 'CONFIRM SETTLEMENT' : 'CHOOSE PAYMENT TO CONTINUE'}
+                  {loading ? 'PROCESSING...' : !['SERVED', 'READY'].includes(currentOrder?.status) ? 'ORDER NOT READY YET' : paymentMethod ? 'CONFIRM SETTLEMENT' : 'CHOOSE PAYMENT TO CONTINUE'}
                 </button>
               </div>
             </div>
