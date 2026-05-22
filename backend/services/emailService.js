@@ -1,21 +1,5 @@
-const nodemailer = require('nodemailer');
-
-// Gmail SMTP transporter — works both locally and on cloud with App Password
-const createTransporter = () => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.log('⚠️  EMAIL_USER or EMAIL_PASS not set');
-    return null;
-  }
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // port 465 with SSL — more reliable on cloud than 587
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
-};
+// Uses Brevo HTTP API — works on Render free tier (no SMTP ports needed)
+// Render blocks all SMTP ports (25, 465, 587), so HTTP API is the only option
 
 const getCredentialsHTML = (username, password, roleDisplayName) => `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -53,26 +37,70 @@ const getCredentialsHTML = (username, password, roleDisplayName) => `
   </div>
 `;
 
-const sendUserCredentials = async (userEmail, username, password, role) => {
-  const roleDisplayName = {
-    'ADMIN': 'Administrator',
-    'WAITER': 'Waiter/Staff',
-    'KITCHEN': 'Kitchen Staff'
-  }[role] || role;
-
-  try {
-    const transporter = createTransporter();
-    if (!transporter) {
-      return { success: false, error: 'Email not configured', manualCredentials: { username, password, role } };
+// Send email via Brevo HTTP API (works on Render — no SMTP ports needed)
+const sendViaBrevoAPI = async (to, subject, html) => {
+  const axios = require('axios');
+  const response = await axios.post(
+    'https://api.brevo.com/v3/smtp/email',
+    {
+      sender: { name: 'Smart Restro', email: process.env.EMAIL_USER },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html
+    },
+    {
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json'
+      }
     }
-    const result = await transporter.sendMail({
-      from: `"Smart Restro" <${process.env.EMAIL_USER}>`,
-      to: userEmail,
-      subject: 'Smart Restro - Your Login Credentials',
-      html: getCredentialsHTML(username, password, roleDisplayName)
-    });
-    console.log('✅ Email sent:', result.messageId);
-    return { success: true, messageId: result.messageId };
+  );
+  return response.data.messageId;
+};
+
+// Send email via Resend HTTP API (alternative)
+const sendViaResendAPI = async (to, subject, html) => {
+  const axios = require('axios');
+  const response = await axios.post(
+    'https://api.resend.com/emails',
+    {
+      from: 'Smart Restro <onboarding@resend.dev>',
+      to,
+      subject,
+      html
+    },
+    {
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  if (response.data.error) throw new Error(response.data.error.message);
+  return response.data.id;
+};
+
+const sendEmail = async (to, subject, html) => {
+  // Try Brevo API first (recommended for Render)
+  if (process.env.BREVO_API_KEY) {
+    const id = await sendViaBrevoAPI(to, subject, html);
+    console.log('✅ Email sent via Brevo API:', id);
+    return;
+  }
+  // Try Resend API
+  if (process.env.RESEND_API_KEY) {
+    const id = await sendViaResendAPI(to, subject, html);
+    console.log('✅ Email sent via Resend API:', id);
+    return;
+  }
+  throw new Error('No email API key configured. Add BREVO_API_KEY or RESEND_API_KEY to environment variables.');
+};
+
+const sendUserCredentials = async (userEmail, username, password, role) => {
+  const roleDisplayName = { 'ADMIN': 'Administrator', 'WAITER': 'Waiter/Staff', 'KITCHEN': 'Kitchen Staff' }[role] || role;
+  try {
+    await sendEmail(userEmail, 'Smart Restro - Your Login Credentials', getCredentialsHTML(username, password, roleDisplayName));
+    return { success: true };
   } catch (error) {
     console.error('❌ Email failed:', error.message);
     return { success: false, error: error.message, manualCredentials: { username, password, role } };
@@ -80,29 +108,23 @@ const sendUserCredentials = async (userEmail, username, password, role) => {
 };
 
 const sendPasswordResetEmail = async (email, name, resetUrl) => {
-  try {
-    const transporter = createTransporter();
-    if (!transporter) return { success: false, error: 'Email not configured' };
-    await transporter.sendMail({
-      from: `"Smart Restro" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: 'Smart Restro - Password Reset Request',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background-color: #059669; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0;">Smart Restro</h1>
-          </div>
-          <div style="background-color: white; padding: 30px; border: 2px solid #059669; border-top: none; border-radius: 0 0 10px 10px;">
-            <h2>Hi ${name},</h2>
-            <p>You requested a password reset. Click the button below:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" style="background-color: #059669; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Reset Password</a>
-            </div>
-            <p style="color: #666; font-size: 13px;">This link expires in 1 hour.</p>
-          </div>
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background-color: #059669; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="margin: 0;">Smart Restro</h1>
+      </div>
+      <div style="background-color: white; padding: 30px; border: 2px solid #059669; border-top: none; border-radius: 0 0 10px 10px;">
+        <h2>Hi ${name},</h2>
+        <p>You requested a password reset. Click the button below:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" style="background-color: #059669; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Reset Password</a>
         </div>
-      `
-    });
+        <p style="color: #666; font-size: 13px;">This link expires in 1 hour.</p>
+      </div>
+    </div>
+  `;
+  try {
+    await sendEmail(email, 'Smart Restro - Password Reset Request', html);
     return { success: true };
   } catch (err) {
     console.error('Password reset email failed:', err.message);
