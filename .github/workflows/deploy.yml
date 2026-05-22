@@ -7,52 +7,36 @@ on:
     branches: [main]
 
 jobs:
-  # ── Job 1: Check Backend ───────────────────────────────────────────────────
   check-backend:
     name: Check Backend
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
-
-      - name: Install backend dependencies
-        run: npm install
+      - run: npm install
+        working-directory: ./backend
+      - run: node -e "console.log('Backend OK')"
         working-directory: ./backend
 
-      - name: Verify backend entry point
-        run: node -e "console.log('Backend OK')"
-        working-directory: ./backend
-
-  # ── Job 2: Build Frontend ──────────────────────────────────────────────────
   build-frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        run: npm install
+      - run: npm install
         working-directory: ./frontend
-
-      - name: Build frontend
-        run: npm run build
+      - run: npm run build
         working-directory: ./frontend
         env:
-          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
+          REACT_APP_API_URL: https://placeholder.onrender.com/api
           DISABLE_ESLINT_PLUGIN: "true"
           CI: "false"
