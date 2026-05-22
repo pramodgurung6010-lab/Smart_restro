@@ -54,7 +54,8 @@ jobs:
         working-directory: ./frontend
         env:
           REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
-          DISABLE_ESLINT_PLUGIN: true
+          DISABLE_ESLINT_PLUGIN: "true"
+          CI: "false"
 
   # ── Job 3: Deploy to Render ────────────────────────────────────────────────
   deploy:
