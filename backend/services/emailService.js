@@ -1,49 +1,68 @@
 const nodemailer = require('nodemailer');
 
-// Create transporter — supports Gmail (local) and Brevo SMTP (production)
+// ─── Transporter factory ─────────────────────────────────────────────────────
+// Priority: Resend API → Brevo SMTP → Gmail SMTP → null (no email)
 const createTransporter = () => {
-  const emailUser = process.env.EMAIL_USER;
-  const emailPass = process.env.EMAIL_PASS;
-
-  if (!emailUser || !emailPass) {
-    console.log('⚠️  Email not configured.');
-    return null;
+  // Option 1: Resend (best for cloud — works from any server IP)
+  if (process.env.RESEND_API_KEY) {
+    return nodemailer.createTransport({
+      host: 'smtp.resend.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: 'resend',
+        pass: process.env.RESEND_API_KEY
+      }
+    });
   }
 
-  // Use Brevo SMTP in production (works from cloud servers without IP blocking)
-  // Use Gmail SMTP in development
-  if (process.env.NODE_ENV === 'production' && process.env.BREVO_SMTP_KEY) {
+  // Option 2: Brevo SMTP (also cloud-friendly)
+  if (process.env.BREVO_SMTP_KEY) {
     return nodemailer.createTransport({
       host: 'smtp-relay.brevo.com',
       port: 587,
       secure: false,
       auth: {
-        user: emailUser,
+        user: process.env.EMAIL_USER,
         pass: process.env.BREVO_SMTP_KEY
       }
     });
   }
 
-  // Gmail SMTP (local development)
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-      user: emailUser,
-      pass: emailPass
-    },
-    tls: { rejectUnauthorized: false }
-  });
+  // Option 3: Gmail (works locally, may be blocked on cloud)
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    return nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      },
+      tls: { rejectUnauthorized: false }
+    });
+  }
+
+  console.log('⚠️  No email provider configured.');
+  return null;
 };
 
-// Send user credentials via email
+// ─── Get sender address ───────────────────────────────────────────────────────
+const getSender = () => {
+  // Resend requires a verified domain — use onboarding@resend.dev for testing
+  if (process.env.RESEND_API_KEY) {
+    return process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  }
+  return `"Smart Restro" <${process.env.EMAIL_USER}>`;
+};
+
+// ─── Send credentials email ───────────────────────────────────────────────────
 const sendUserCredentials = async (userEmail, username, password, role) => {
   try {
     const transporter = createTransporter();
 
     if (!transporter) {
-      console.log(`📋 Manual credentials for ${userEmail}: ${username} / ${password}`);
+      console.log(`📋 Manual credentials — ${userEmail}: ${username} / ${password}`);
       return {
         success: false,
         error: 'Email not configured',
@@ -57,14 +76,14 @@ const sendUserCredentials = async (userEmail, username, password, role) => {
       'KITCHEN': 'Kitchen Staff'
     }[role] || role;
 
-    const mailOptions = {
-      from: `"Smart Restro" <${process.env.EMAIL_USER}>`,
+    const result = await transporter.sendMail({
+      from: getSender(),
       to: userEmail,
       subject: 'Smart Restro - Your Login Credentials',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background-color: #059669; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0; font-size: 24px;">Smart Restro</h1>
+            <h1 style="margin: 0;">Smart Restro</h1>
             <p style="margin: 5px 0 0 0;">Restaurant Management System</p>
           </div>
           <div style="background-color: white; padding: 30px; border: 2px solid #059669; border-top: none; border-radius: 0 0 10px 10px;">
@@ -96,9 +115,8 @@ const sendUserCredentials = async (userEmail, username, password, role) => {
           </div>
         </div>
       `
-    };
+    });
 
-    const result = await transporter.sendMail(mailOptions);
     console.log('✅ Credentials email sent:', result.messageId);
     return { success: true, messageId: result.messageId };
 
@@ -112,6 +130,7 @@ const sendUserCredentials = async (userEmail, username, password, role) => {
   }
 };
 
+// ─── Send password reset email ────────────────────────────────────────────────
 const sendPasswordResetEmail = async (email, name, resetUrl) => {
   try {
     const transporter = createTransporter();
@@ -121,7 +140,7 @@ const sendPasswordResetEmail = async (email, name, resetUrl) => {
     }
 
     await transporter.sendMail({
-      from: `"Smart Restro" <${process.env.EMAIL_USER}>`,
+      from: getSender(),
       to: email,
       subject: 'Smart Restro - Password Reset Request',
       html: `
