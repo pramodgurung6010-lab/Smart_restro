@@ -1,10 +1,11 @@
 services:
-  # ─── Backend — Docker image from Docker Hub ──────────────────────────────
+  # ─── Backend (Node.js — no Docker) ──────────────────────────────────────────
   - type: web
     name: smart-restro-backend
-    runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -20,7 +21,7 @@ services:
         sync: false
     healthCheckPath: /test
 
-  # ─── Frontend — Static Site (React build) ────────────────────────────────
+  # ─── Frontend (React Static Site — no Docker) ────────────────────────────────
   - type: web
     name: smart-restro-frontend
     runtime: static
