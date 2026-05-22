@@ -129,8 +129,8 @@ const UserManagement = () => {
         password: '' 
       });
       
-      // Clear status after 5 seconds
-      setTimeout(() => setEmailStatus(''), 5000);
+      // Clear status after 30 seconds (longer so admin can copy credentials)
+      setTimeout(() => setEmailStatus(''), 30000);
       
     } catch (err) {
       setError(err.response?.data?.message || 'Operation failed');
@@ -203,9 +203,32 @@ const UserManagement = () => {
             ? 'bg-green-50 border-green-200 text-green-800' 
             : 'bg-yellow-50 border-yellow-200 text-yellow-800'
         }`}>
-          <div className="flex items-center gap-2">
-            {emailStatus.includes('✅') ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-            <span className="font-medium">{emailStatus}</span>
+          <div className="flex items-start gap-2">
+            {emailStatus.includes('✅') ? <CheckCircle size={16} className="mt-0.5 shrink-0" /> : <AlertCircle size={16} className="mt-0.5 shrink-0" />}
+            <div className="flex-1">
+              {emailStatus.includes('⚠️') ? (
+                <>
+                  <p className="font-bold text-sm mb-2">User created! Email could not be sent — share credentials manually:</p>
+                  <div className="bg-white border border-yellow-300 rounded-lg p-3 font-mono text-sm space-y-1">
+                    {emailStatus.split('\n').filter(l => l.trim() && !l.includes('⚠️')).map((line, i) => (
+                      <p key={i} className="text-gray-800">{line}</p>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => {
+                      const text = emailStatus.split('\n').filter(l => l.trim() && !l.includes('⚠️')).join('\n');
+                      navigator.clipboard.writeText(text);
+                    }}
+                    className="mt-2 text-xs font-bold text-yellow-700 underline"
+                  >
+                    Copy credentials
+                  </button>
+                </>
+              ) : (
+                <span className="font-medium text-sm">{emailStatus}</span>
+              )}
+            </div>
+            <button onClick={() => setEmailStatus('')} className="text-gray-400 hover:text-gray-600 shrink-0">✕</button>
           </div>
         </div>
       )}
