@@ -3,6 +3,8 @@ import axios from 'axios';
 import { UserRole } from '../types';
 import { Loader2, CheckCircle } from 'lucide-react';
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
+
 const LoginPage = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -35,7 +37,7 @@ const LoginPage = ({ onLogin }) => {
     setLoading(true);
     setFpMessage('');
     try {
-      const res = await axios.post('http://localhost:5002/api/auth/forgot-password', { email: fpEmail });
+      const res = await axios.post(`${API_BASE}/auth/forgot-password`, { email: fpEmail });
       if (res.data.resetUrl) {
         setFpMessage(`⚠️ Email could not be sent. Use this link: ${res.data.resetUrl}`);
       } else {
@@ -56,7 +58,7 @@ const LoginPage = ({ onLogin }) => {
     setLoading(true);
     setFpMessage('');
     try {
-      await axios.post('http://localhost:5002/api/auth/reset-password', { token: resetToken, newPassword });
+      await axios.post(`${API_BASE}/auth/reset-password`, { token: resetToken, newPassword });
       setResetSuccess(true);
       setTimeout(() => { setView('login'); window.history.replaceState({}, '', '/'); }, 3000);
     } catch (err) {
@@ -79,9 +81,8 @@ const LoginPage = ({ onLogin }) => {
 
     try {
       console.log('🔄 Attempting login with:', { username, password, role });
-      console.log('🌐 API URL:', 'http://localhost:5002/api/auth/login');
-      
-      const res = await axios.post('http://localhost:5002/api/auth/login', {
+      console.log('🌐 API URL:', API_BASE);
+      const res = await axios.post(`${API_BASE}/auth/login`, {
         username,
         password,
         role

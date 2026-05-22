@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { CATEGORIES } from '../constants';
 import { Plus, Search, Edit3, Trash2, X, DollarSign, Tag, Info, FileText } from 'lucide-react';
 
@@ -17,13 +17,7 @@ const MenuManagement = ({ menu: propMenu, onUpdateItem }) => {
     description: ''
   });
 
-  // API configuration - reads token fresh on each request
-  const api = axios.create({ baseURL: 'http://localhost:5002/api' });
-  api.interceptors.request.use(config => {
-    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    if (user.token) config.headers.Authorization = `Bearer ${user.token}`;
-    return config;
-  });
+  // API configuration - reads token fresh on each request (from services/api.js)
 
   // Fetch menu items from backend
   const fetchMenu = async () => {

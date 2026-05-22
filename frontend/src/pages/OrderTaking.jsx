@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { OrderStatus } from '../types';
 import { CATEGORIES } from '../constants';
 import { ChevronLeft, Plus, Minus, Send, ShoppingCart, Loader } from 'lucide-react';
@@ -12,18 +12,8 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  // Get auth token from localStorage
-  const getAuthToken = () => {
-    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    return user.token;
-  };
-
   // API configuration — use interceptor so token is always fresh per request
-  const api = axios.create({ baseURL: 'http://localhost:5002/api' });
-  api.interceptors.request.use(config => {
-    config.headers['Authorization'] = `Bearer ${getAuthToken()}`;
-    return config;
-  });
+  // (imported from services/api.js)
 
   // Fetch menu items and existing order (if any)
   const fetchMenu = async () => {

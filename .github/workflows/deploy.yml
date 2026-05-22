@@ -1,0 +1,52 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-backend:
+    name: Check Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        run: npm install
+        working-directory: ./backend
+      - name: Verify backend entry point exists
+        run: node -e "require('./server.js')" &
+        working-directory: ./backend
+        env:
+          MONGO_URI: mongodb://localhost:27017/test
+          JWT_SECRET: test_secret
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: ./frontend
+      - name: Build frontend
+        run: npm run build
+        working-directory: ./frontend
+        env:
+          REACT_APP_API_URL: https://placeholder.onrender.com/api
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-build
+          path: frontend/build

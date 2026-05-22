@@ -1,0 +1,37 @@
+services:
+  # ─── Backend (Node.js / Express) ───────────────────────────────────────────
+  - type: web
+    name: smart-restro-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false          # you will paste this in Render dashboard
+      - key: JWT_SECRET
+        sync: false          # you will paste this in Render dashboard
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+    healthCheckPath: /test   # GET /test returns { message: 'Server is working!' }
+
+  # ─── Frontend (React Static Site) ──────────────────────────────────────────
+  - type: web
+    name: smart-restro-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_API_URL
+        sync: false          # paste your backend URL here after backend deploys
+      - key: DISABLE_ESLINT_PLUGIN
+        value: "true"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

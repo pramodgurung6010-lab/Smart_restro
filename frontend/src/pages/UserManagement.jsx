@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { UserRole } from '../types';
 import { Plus, Edit2, Trash2, Mail, Phone, User, ShieldCheck, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -26,10 +26,7 @@ const UserManagement = () => {
 
   const loadUsers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5002/api/auth/users', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/auth/users');
       setUsers(response.data);
     } catch (error) {
       console.error('Failed to load users:', error.response?.data || error.message);
@@ -89,32 +86,24 @@ const UserManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      
       if (editingUser) {
-        // Update existing user
-        await axios.put(`http://localhost:5002/api/auth/users/${editingUser._id}`, {
+        await api.put(`/auth/users/${editingUser._id}`, {
           username: formData.username,
           name: formData.name,
           email: formData.email,
           role: formData.role,
           phoneNumber: formData.phoneNumber,
           isActive: true
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
         });
         
         setEmailStatus('User updated successfully');
       } else {
-        // Create new user
-        const response = await axios.post('http://localhost:5002/api/auth/register', {
+        const response = await api.post('/auth/register', {
           username: formData.username,
           name: formData.name,
           email: formData.email,
           role: formData.role,
           phoneNumber: formData.phoneNumber,
-          // No password field - it will be auto-generated
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
         });
 
         if (response.data.manualCredentials) {
@@ -166,15 +155,9 @@ const UserManagement = () => {
   };
 
   const deleteUser = async (user) => {
-    if (!window.confirm(`Are you sure you want to remove ${user.name || user.username}?`)) {
-      return;
-    }
-
+    if (!window.confirm(`Are you sure you want to remove ${user.name || user.username}?`)) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5002/api/auth/users/${user._id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/auth/users/${user._id}`);
       
       // Reload users list
       await loadUsers();

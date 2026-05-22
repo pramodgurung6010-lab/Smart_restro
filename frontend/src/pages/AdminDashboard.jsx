@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { DollarSign, Clock, CheckCircle, Users, Loader } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -7,18 +7,8 @@ const AdminDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Get auth token
-  const getAuthToken = () => {
-    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    return user.token;
-  };
-
   // API configuration — use interceptor so token is always fresh per request
-  const api = axios.create({ baseURL: 'http://localhost:5002/api' });
-  api.interceptors.request.use(config => {
-    config.headers['Authorization'] = `Bearer ${getAuthToken()}`;
-    return config;
-  });
+  // (imported from services/api.js)
 
   // Fetch dashboard data
   const fetchDashboardData = async (isInitial = false) => {

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Download, TrendingUp, Calendar, FileText, History as HistoryIcon, ArrowRight } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -21,10 +21,7 @@ const ReportsPage = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-        const response = await axios.get('http://localhost:5002/api/orders?limit=1000', {
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
+        const response = await api.get('/orders?limit=1000');
         const backendOrders = (response.data.orders || []).map(o => ({
           id: o._id,
           orderId: o.orderId,

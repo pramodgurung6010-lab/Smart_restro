@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Save, UserCircle, Key, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 const ProfileSettings = ({ user, onUpdate, onLogout }) => {
@@ -13,11 +13,7 @@ const ProfileSettings = ({ user, onUpdate, onLogout }) => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-        const token = currentUser.token;
-        const response = await axios.get('http://localhost:5002/api/auth/profile', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get('/auth/profile');
         const p = response.data;
         setFormData({
           name: p.name || p.username,
@@ -48,14 +44,10 @@ const ProfileSettings = ({ user, onUpdate, onLogout }) => {
     setError('');
 
     try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      const token = currentUser.token;
-      const response = await axios.put('http://localhost:5002/api/auth/profile', {
+      const response = await api.put('/auth/profile', {
         name: formData.name,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       // Update user in parent component and localStorage
@@ -93,13 +85,9 @@ const ProfileSettings = ({ user, onUpdate, onLogout }) => {
     }
 
     try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      const token = currentUser.token;
-      await axios.put('http://localhost:5002/api/auth/change-password', {
+      await api.put('/auth/change-password', {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       setPasswordSuccess(true);

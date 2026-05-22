@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { TableStatus } from '../types';
 import { INITIAL_TABLES } from '../constants';
 import { Users, GitMerge, Columns, X, Check, Move, Undo2, Plus, ChevronDown, ArrowRight } from 'lucide-react';
@@ -37,18 +37,8 @@ const TableMap = ({ onSelectTable }) => {
   const [showStatusMenu, setShowStatusMenu] = useState(null);
   const [showUnmergeModal, setShowUnmergeModal] = useState(null);
 
-  // Get auth token
-  const getAuthToken = () => {
-    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    return user.token;
-  };
-
   // API configuration — use interceptor so token is always fresh per request
-  const api = axios.create({ baseURL: 'http://localhost:5002/api' });
-  api.interceptors.request.use(config => {
-    config.headers['Authorization'] = `Bearer ${getAuthToken()}`;
-    return config;
-  });
+  // (imported from services/api.js)
 
   // Save merge/split state to localStorage whenever tables change
   useEffect(() => {

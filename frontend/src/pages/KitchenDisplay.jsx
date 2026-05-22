@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { UserRole } from '../types';
 import { CheckCircle2, Clock, ShoppingBasket, Loader } from 'lucide-react';
 
@@ -28,18 +28,8 @@ const KitchenDisplay = ({ role }) => {
     createdAt: new Date(order.createdAt).getTime()
   });
 
-  // Get auth token
-  const getAuthToken = () => {
-    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    return user.token;
-  };
-
   // API configuration — use interceptor so token is always fresh per request
-  const api = axios.create({ baseURL: 'http://localhost:5002/api' });
-  api.interceptors.request.use(config => {
-    config.headers['Authorization'] = `Bearer ${getAuthToken()}`;
-    return config;
-  });
+  // (imported from services/api.js)
 
   // Fetch orders from backend
   const fetchOrders = async (isInitialLoad = false) => {
