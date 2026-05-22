@@ -219,10 +219,22 @@ const UserManagement = () => {
                       const text = emailStatus.split('\n').filter(l => l.trim() && !l.includes('⚠️')).join('\n');
                       navigator.clipboard.writeText(text);
                     }}
-                    className="mt-2 text-xs font-bold text-yellow-700 underline"
+                    className="mt-2 text-xs font-bold text-yellow-700 underline mr-4"
                   >
                     Copy credentials
                   </button>
+                  <a
+                    href={(() => {
+                      const lines = emailStatus.split('\n').filter(l => l.trim() && !l.includes('⚠️'));
+                      const text = `Smart Restro Login Credentials:\n${lines.join('\n')}\n\nLogin at your restaurant app.`;
+                      return `https://wa.me/?text=${encodeURIComponent(text)}`;
+                    })()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 text-xs font-bold text-green-700 underline"
+                  >
+                    Share via WhatsApp
+                  </a>
                 </>
               ) : (
                 <span className="font-medium text-sm">{emailStatus}</span>
