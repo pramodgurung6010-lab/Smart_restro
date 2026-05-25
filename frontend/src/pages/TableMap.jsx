@@ -117,9 +117,10 @@ const TableMap = ({ onSelectTable }) => {
       return 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-200 text-emerald-800 scale-105';
     }
 
-    // Sub-tables are selectable in merge mode - show as clickable
-    if (mergeMode && table.parentId && !selectedForMerge.includes(table.id)) {
-      return 'bg-white border-emerald-300 border-dashed hover:border-emerald-500 hover:bg-emerald-50/50 text-emerald-700 cursor-pointer';
+    // In merge mode - show all selectable tables (AVAILABLE + OCCUPIED + sub-tables) with dashed border
+    if (mergeMode && !selectedForMerge.includes(table.id) &&
+        table.status !== TableStatus.MERGED && table.status !== TableStatus.RESERVED) {
+      return 'bg-white border-emerald-300 border-dashed hover:border-emerald-500 hover:bg-emerald-50/50 cursor-pointer';
     }
     
     // UI state for the table being moved
@@ -148,8 +149,8 @@ const TableMap = ({ onSelectTable }) => {
 
   const handleTableClick = (table) => {
     if (mergeMode) {
-      // Allow selecting AVAILABLE tables OR sub-tables (split parts) regardless of status
-      if (table.status !== TableStatus.AVAILABLE && !table.parentId) return;
+      // Allow selecting AVAILABLE or OCCUPIED tables, and sub-tables (split parts)
+      if (table.status === TableStatus.MERGED || table.status === TableStatus.RESERVED) return;
       setSelectedForMerge(prev => prev.includes(table.id) ? prev.filter(id => id !== table.id) : [...prev, table.id]);
       return;
     }
