@@ -300,16 +300,16 @@ const UserManagement = () => {
                     disabled={user.role === 'ADMIN'}
                     className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
                       user.role === 'ADMIN'
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed'
                         : user.isActive
                         ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
                         : 'bg-red-50 text-red-600 opacity-70 hover:opacity-100'
                     }`}
                   >
                     <div className={`w-1.5 h-1.5 rounded-full ${
-                      user.role === 'ADMIN' ? 'bg-gray-400' : user.isActive ? 'bg-emerald-600' : 'bg-red-600'
+                      user.role === 'ADMIN' ? 'bg-emerald-600' : user.isActive ? 'bg-emerald-600' : 'bg-red-600'
                     }`}></div>
-                    {user.role === 'ADMIN' ? 'Admin' : user.isActive ? 'Active' : 'Inactive'}
+                    {user.role === 'ADMIN' ? 'Active' : user.isActive ? 'Active' : 'Inactive'}
                   </button>
                 </td>
                 <td className="px-8 py-5 text-right space-x-2">
