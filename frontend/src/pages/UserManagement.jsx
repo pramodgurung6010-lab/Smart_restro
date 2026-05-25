@@ -181,6 +181,16 @@ const UserManagement = () => {
     setEmailStatus('');
   };
 
+  const toggleUserStatus = async (user) => {
+    if (user.role === 'ADMIN') return;
+    try {
+      await api.patch(`/auth/users/${user._id}/toggle-status`);
+      await loadUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update status');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -285,13 +295,22 @@ const UserManagement = () => {
                 </td>
                 <td className="px-8 py-5 font-mono text-sm text-gray-400 font-bold">@{user.username}</td>
                 <td className="px-8 py-5">
-                  <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full ${
-                    user.isActive 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-red-100 text-red-700'
-                  }`}>
-                    {user.isActive ? 'Active' : 'Inactive'}
-                  </span>
+                  <button
+                    onClick={() => toggleUserStatus(user)}
+                    disabled={user.role === 'ADMIN'}
+                    className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
+                      user.role === 'ADMIN'
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : user.isActive
+                        ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                        : 'bg-red-50 text-red-600 opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <div className={`w-1.5 h-1.5 rounded-full ${
+                      user.role === 'ADMIN' ? 'bg-gray-400' : user.isActive ? 'bg-emerald-600' : 'bg-red-600'
+                    }`}></div>
+                    {user.role === 'ADMIN' ? 'Admin' : user.isActive ? 'Active' : 'Inactive'}
+                  </button>
                 </td>
                 <td className="px-8 py-5 text-right space-x-2">
                   <button 
