@@ -313,26 +313,6 @@ const KitchenDisplay = ({ role }) => {
                 </div>
               </div>
 
-              {/* Order Level Action */}
-              <div className="px-5 py-4 bg-gray-50/50 border-t border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Order Progress</span>
-                    <span className={`text-[11px] font-black uppercase tracking-tighter ${
-                      order.status === 'PENDING' ? 'text-orange-600' :
-                      order.status === 'PREPARING' ? 'text-orange-600' :
-                      order.status === 'SERVED' ? 'text-emerald-700' :
-                      'text-emerald-600'
-                    }`}>
-                      {order.status}
-                    </span>
-                  </div>
-                  
-                  <span className="px-3 py-1.5 text-[10px] font-black rounded-lg bg-white border border-gray-200 text-gray-600 uppercase">
-                    {order.status === 'PENDING' ? 'ORDER PLACED' : order.status}
-                  </span>
-                </div>
-              </div>
             </div>
           );
         }) : (
