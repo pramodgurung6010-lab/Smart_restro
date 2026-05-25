@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: '18'
       - name: Install frontend dependencies
-        run: npm install --legacy-peer-deps
+        run: npm install --legacy-peer-deps --no-audit
         working-directory: ./frontend
       - name: Build frontend
         run: npm run build
@@ -41,3 +41,4 @@ jobs:
           DISABLE_ESLINT_PLUGIN: "true"
           CI: "false"
           GENERATE_SOURCEMAP: "false"
+          SKIP_PREFLIGHT_CHECK: "true"

@@ -186,12 +186,12 @@ const BillingAndPayment = ({ userRole }) => {
 
       // Calculate the actual total shown to user (with service charge)
       const orderSubtotal = isEditingBill ? getEditedOrderTotal() : currentOrder.subtotal || currentOrder.total;
-      const { total: displayTotal } = calculateTotals(orderSubtotal);
+      const { total: displayTotal, discountAmount } = calculateTotals(orderSubtotal);
 
       const response = await api.post(`/orders/${currentOrder.id}/bill/pay`, {
         paymentMethod,
         amountPaid: displayTotal,
-        discount: 0
+        discount: discountAmount
       });
 
       if (response.data.message === 'Payment processed successfully') {

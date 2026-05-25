@@ -312,7 +312,7 @@ const processPayment = async (req, res) => {
 
     if (discount && discount > 0) {
       order.discount = discount;
-      order.total = order.subtotal + order.tax - discount;
+      order.total = Number((order.subtotal + order.tax - discount).toFixed(2));
     }
     order.paymentMethod = paymentMethod;
     order.paymentStatus = 'PAID';
