@@ -81,14 +81,17 @@ const create = async (req, res) => {
     }
 
     const subtotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-    const tax = Math.round(subtotal * 0.05 * 100) / 100;
+    const vat = Math.round(subtotal * 0.13 * 100) / 100;
+    const serviceCharge = Math.round(subtotal * 0.10 * 100) / 100;
+    const tax = Math.round((vat + serviceCharge) * 100) / 100;
     const total = Math.round((subtotal + tax) * 100) / 100;
 
     const now = new Date();
     const orderId = `ORD${now.getFullYear().toString().slice(-2)}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}${now.getTime().toString().slice(-6)}`;
 
     const newOrder = new Order({
-      orderId, tableId, tableNumber, items: orderItems, subtotal, tax, total,
+      orderId, tableId, tableNumber, items: orderItems,
+      subtotal, vat, serviceCharge, tax, total,
       waiter: req.user._id, waiterName: req.user.name || req.user.username, status: 'PENDING'
     });
     await newOrder.save();
@@ -127,7 +130,9 @@ const update = async (req, res) => {
       const subtotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
       updateData.items = orderItems;
       updateData.subtotal = subtotal;
-      updateData.tax = Math.round(subtotal * 0.05 * 100) / 100;
+      updateData.vat = Math.round(subtotal * 0.13 * 100) / 100;
+      updateData.serviceCharge = Math.round(subtotal * 0.10 * 100) / 100;
+      updateData.tax = Math.round((updateData.vat + updateData.serviceCharge) * 100) / 100;
       updateData.total = Math.round((subtotal + updateData.tax) * 100) / 100;
 
       // Reset order status to PENDING so it goes back to kitchen
@@ -377,13 +382,15 @@ const applyDiscount = async (req, res) => {
     let discountAmount = 0;
     if (discountType === 'percentage') {
       if (discount < 0 || discount > 100) return res.status(400).json({ message: 'Invalid discount percentage' });
-      discountAmount = Math.round(order.subtotal * discount / 100 * 100) / 100;
+      // Apply percentage on full total (subtotal + vat + service)
+      const fullTotal = order.subtotal + order.tax;
+      discountAmount = Math.round(fullTotal * discount / 100 * 100) / 100;
     } else {
-      if (discount < 0 || discount > order.subtotal) return res.status(400).json({ message: 'Invalid discount amount' });
+      if (discount < 0 || discount > (order.subtotal + order.tax)) return res.status(400).json({ message: 'Invalid discount amount' });
       discountAmount = discount;
     }
     order.discount = discountAmount;
-    order.total = order.subtotal + order.tax - discountAmount;
+    order.total = Number((order.subtotal + order.tax - discountAmount).toFixed(2));
     await order.save();
 
     const updatedOrder = await Order.findById(id).populate('waiter', 'name username').populate('items.menuItem', 'name category');
@@ -417,7 +424,9 @@ const mergeTables = async (req, res) => {
       }
       const subtotal = masterOrder.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
       masterOrder.subtotal = subtotal;
-      masterOrder.tax = Math.round(subtotal * 0.05 * 100) / 100;
+      masterOrder.vat = Math.round(subtotal * 0.13 * 100) / 100;
+      masterOrder.serviceCharge = Math.round(subtotal * 0.10 * 100) / 100;
+      masterOrder.tax = Math.round((masterOrder.vat + masterOrder.serviceCharge) * 100) / 100;
       masterOrder.total = Math.round((masterOrder.subtotal + masterOrder.tax) * 100) / 100;
       await masterOrder.save();
       return res.status(200).json({ message: 'Orders merged successfully', merged: true, order: masterOrder });
@@ -438,7 +447,9 @@ const mergeTables = async (req, res) => {
       }
       const subtotal = first.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
       first.subtotal = subtotal;
-      first.tax = Math.round(subtotal * 0.05 * 100) / 100;
+      first.vat = Math.round(subtotal * 0.13 * 100) / 100;
+      first.serviceCharge = Math.round(subtotal * 0.10 * 100) / 100;
+      first.tax = Math.round((first.vat + first.serviceCharge) * 100) / 100;
       first.total = Math.round((first.subtotal + first.tax) * 100) / 100;
       await first.save();
       return res.status(200).json({ message: 'Orders merged successfully', merged: true, order: first });
