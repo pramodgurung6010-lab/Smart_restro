@@ -39,8 +39,11 @@ const BillingAndPayment = ({ userRole }) => {
         items: o.items,
         status: o.status,
         subtotal: o.subtotal || 0,
+        vat: o.vat || 0,
+        serviceCharge: o.serviceCharge || 0,
         tax: o.tax || 0,
         total: o.total || 0,
+        discount: o.discount || 0,
         isPaid: o.isPaid,
         createdAt: o.createdAt
       })));
@@ -76,25 +79,38 @@ const BillingAndPayment = ({ userRole }) => {
   const currentTable = tables.find(t => t.id === selectedTableId);
   const currentOrder = orders.find(o => o.id === currentTable?.currentOrderId);
 
-  const calculateTotals = (sub) => {
-    // Service charge is included in the backend total (tax only = 5%)
-    // We display it separately for transparency but the stored total matches
-    const tax = Number((sub * 0.05).toFixed(2));
-    const service = Number((sub * 0.10).toFixed(2));
-    const subtotalWithTaxService = sub + tax + service;
+  // Calculate totals - uses stored vat/serviceCharge if available, else recalculates
+  const calculateTotals = (order) => {
+    const sub = order.subtotal || 0;
+    const vat = order.vat > 0 ? order.vat : Math.round(sub * 0.13 * 100) / 100;
+    const service = order.serviceCharge > 0 ? order.serviceCharge : Math.round(sub * 0.10 * 100) / 100;
+
+    // If discount already applied to DB, use stored total directly
+    const storedDiscount = order.discount || 0;
+    if (storedDiscount > 0) {
+      return {
+        subtotal: sub,
+        vat,
+        service,
+        discountAmount: storedDiscount,
+        total: Number(order.total.toFixed(2))
+      };
+    }
+
+    // Otherwise calculate from the discount input (preview before applying)
     const discountVal = parseFloat(discount) || 0;
-    
     let discountAmount = 0;
     if (discountVal > 0) {
+      const base = sub + vat + service;
       if (discountType === 'percentage') {
-        discountAmount = Number((subtotalWithTaxService * (discountVal / 100)).toFixed(2));
+        discountAmount = Number((base * (discountVal / 100)).toFixed(2));
       } else {
         discountAmount = Number(discountVal.toFixed(2));
       }
     }
-    
-    const total = Number((subtotalWithTaxService - discountAmount).toFixed(2));
-    return { subtotal: sub, tax, service, discountAmount, total };
+
+    const total = Number((sub + vat + service - discountAmount).toFixed(2));
+    return { subtotal: sub, vat, service, discountAmount, total };
   };
 
   const getEditedOrderTotal = () => {
@@ -123,6 +139,36 @@ const BillingAndPayment = ({ userRole }) => {
         [field]: value // store raw string while typing
       }
     }));
+  };
+
+  const [discountAppliedOrders, setDiscountAppliedOrders] = useState({});
+  // Auto-mark as applied if the order already has a stored discount from DB
+  const discountApplied = discountAppliedOrders[selectedTableId] || (currentOrder?.discount > 0);
+  const setDiscountApplied = (val) => setDiscountAppliedOrders(prev => ({ ...prev, [selectedTableId]: val }));
+
+  const applyDiscount = async () => {
+    if (!currentOrder || !discount || parseFloat(discount) <= 0) return;
+    try {
+      setLoading(true);
+      const { discountAmount } = calculateTotals(currentOrder);
+      if (discountAmount <= 0) {
+        setMessage({ type: 'error', text: 'Invalid discount value' });
+        return;
+      }
+      await api.post(`/orders/${currentOrder.id}/bill/discount`, {
+        discount: discountAmount,
+        discountType: 'amount'
+      });
+      // Refresh orders but preserve discount input
+      await fetchOrdersAndTables();
+      setDiscountApplied(true);
+      setMessage({ type: 'success', text: `Discount of Rs.${discountAmount.toFixed(2)} applied!` });
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to apply discount' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const saveEdits = async () => {
@@ -184,14 +230,20 @@ const BillingAndPayment = ({ userRole }) => {
         });
       }
 
-      // Calculate the actual total shown to user (with service charge)
-      const orderSubtotal = isEditingBill ? getEditedOrderTotal() : currentOrder.subtotal || currentOrder.total;
-      const { total: displayTotal, discountAmount } = calculateTotals(orderSubtotal);
+      const { total: displayTotal, discountAmount } = calculateTotals(currentOrder);
+
+      // Save discount to backend before payment if one was applied
+      if (discountAmount > 0) {
+        await api.post(`/orders/${currentOrder.id}/bill/discount`, {
+          discount: discountAmount,
+          discountType: 'amount'
+        });
+      }
 
       const response = await api.post(`/orders/${currentOrder.id}/bill/pay`, {
         paymentMethod,
         amountPaid: displayTotal,
-        discount: discountAmount
+        discount: 0  // already saved above
       });
 
       if (response.data.message === 'Payment processed successfully') {
@@ -219,6 +271,7 @@ const BillingAndPayment = ({ userRole }) => {
           setPaymentMethod(null);
           setIsSuccess(false);
           setDiscount('');
+          setDiscountType('percentage');
           setEditedItems({});
           setIsEditingBill(false);
           setMessage({ type: '', text: '' });
@@ -239,8 +292,7 @@ const BillingAndPayment = ({ userRole }) => {
   const downloadSlip = () => {
     if (!currentOrder || !currentTable) return;
     const doc = new jsPDF({ unit: 'mm', format: [80, 200] });
-    const orderSubtotal = isEditingBill ? getEditedOrderTotal() : currentOrder.subtotal || currentOrder.total;
-    const { subtotal, tax, service, discountAmount, total } = calculateTotals(orderSubtotal);
+    const { subtotal, vat, service, discountAmount, total } = calculateTotals(currentOrder);
 
     let y = 10;
     doc.setFontSize(14);
@@ -300,8 +352,8 @@ const BillingAndPayment = ({ userRole }) => {
     };
 
     row('Subtotal:', `Rs.${subtotal.toFixed(2)}`);
-    row('Gov Tax (5%):', `Rs.${tax.toFixed(2)}`);
-    row('Service (10%):', `Rs.${service.toFixed(2)}`);
+    row('VAT (13%):', `Rs.${vat.toFixed(2)}`);
+    row('Service Charge (10%):', `Rs.${service.toFixed(2)}`);
     if (discountAmount > 0) row('Discount:', `-Rs.${discountAmount.toFixed(2)}`);
     doc.line(5, y, 75, y); y += 4;
     row('TOTAL PAYABLE:', `Rs.${total.toFixed(2)}`, true);
@@ -346,7 +398,14 @@ const BillingAndPayment = ({ userRole }) => {
             return (
               <button
                 key={table.id}
-                onClick={() => { setSelectedTableId(table.id); setPaymentMethod(null); setDiscount(''); setEditedItems({}); setIsEditingBill(false); }}
+                onClick={() => { 
+                  setSelectedTableId(table.id); 
+                  setPaymentMethod(null); 
+                  setDiscount(''); 
+                  setDiscountType('percentage');
+                  setEditedItems({}); 
+                  setIsEditingBill(false); 
+                }}
                 className={`flex items-center gap-4 p-5 rounded-[28px] border-2 transition-all text-left ${
                   isSelected ? 'border-emerald-500 bg-white ring-4 ring-emerald-50 shadow-lg' : 'border-gray-100 bg-white hover:border-emerald-200'
                 }`}
@@ -500,7 +559,7 @@ const BillingAndPayment = ({ userRole }) => {
                           <label className="block text-xs font-bold text-gray-600 mb-1">Discount Type</label>
                           <select
                             value={discountType}
-                            onChange={(e) => { setDiscountType(e.target.value); setDiscount(''); }}
+                            onChange={(e) => { setDiscountType(e.target.value); setDiscount(''); setDiscountApplied(false); }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                           >
                             <option value="percentage">Percentage (%)</option>
@@ -515,12 +574,26 @@ const BillingAndPayment = ({ userRole }) => {
                             type="text"
                             inputMode="decimal"
                             value={discount}
-                            onChange={(e) => setDiscount(e.target.value)}
+                            onChange={(e) => { setDiscount(e.target.value); setDiscountApplied(false); }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
                             placeholder="0"
                           />
                         </div>
                       </div>
+
+                        <button
+                          onClick={applyDiscount}
+                          disabled={loading || discountApplied || !discount || parseFloat(discount) <= 0}
+                          className={`mt-3 px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                            discountApplied
+                              ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed'
+                              : !discount || parseFloat(discount) <= 0
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95'
+                          }`}
+                        >
+                          {discountApplied ? '✓ Applied' : loading ? 'Applying...' : 'Apply Discount'}
+                        </button>
                     </div>
                   )}
                 </div>
@@ -530,7 +603,7 @@ const BillingAndPayment = ({ userRole }) => {
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Payment Method</p>
                     <div className="flex justify-center">
                       <button onClick={() => setPaymentMethod('CASH')} className={`p-8 rounded-[32px] border-2 transition-all flex flex-col items-center gap-3 w-64 ${paymentMethod === 'CASH' ? 'border-emerald-500 bg-emerald-50/20 ring-4 ring-emerald-50 text-emerald-700' : 'bg-white border-gray-50 text-gray-400 hover:border-emerald-200'}`}>
-                        <Banknote size={40} /><span className="text-xs font-bold uppercase tracking-widest">Cash Payment</span>
+                        <Banknote size={40} /><span className="text-xs font-bold uppercase tracking-widest">Payment</span>
                       </button>
                     </div>
                   </div>
@@ -539,21 +612,19 @@ const BillingAndPayment = ({ userRole }) => {
                   <div className="w-[340px] bg-[#022c22] text-white rounded-[40px] p-10 shadow-2xl relative translate-y-4 shrink-0">
                     <div className="space-y-4 opacity-70">
                       {(() => {
-                        const orderTotal = isEditingBill ? getEditedOrderTotal() : currentOrder.subtotal || currentOrder.total;
-                        const { subtotal, tax, service, discountAmount, total } = calculateTotals(orderTotal);
+                        const { subtotal, vat, service, discountAmount, total } = calculateTotals(currentOrder);
+                        const storedDiscount = currentOrder.discount || 0;
+                        const effectiveDiscount = discountAmount > 0 ? discountAmount : storedDiscount;
                         return (
                           <>
                             <div className="flex justify-between text-xs font-bold uppercase tracking-widest"><span>Subtotal</span><span>Rs.{subtotal.toFixed(2)}</span></div>
-                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest"><span>Gov Tax (5%)</span><span>Rs.{tax.toFixed(2)}</span></div>
-                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest"><span>Service (10%)</span><span>Rs.{service.toFixed(2)}</span></div>
-                            {discountAmount > 0 && (
+                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest"><span>VAT (13%)</span><span>Rs.{vat.toFixed(2)}</span></div>
+                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest pb-4 border-b border-white/10"><span>Service Charge (10%)</span><span>Rs.{service.toFixed(2)}</span></div>
+                            {effectiveDiscount > 0 && (
                               <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-emerald-400">
-                                <span>Discount</span><span>-Rs.{discountAmount.toFixed(2)}</span>
+                                <span>Discount</span><span>-Rs.{effectiveDiscount.toFixed(2)}</span>
                               </div>
                             )}
-                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest pb-4 border-b border-white/10">
-                              <span>Subtotal + Tax/Service</span><span>Rs.{(subtotal + tax + service).toFixed(2)}</span>
-                            </div>
                             <div className="pt-2 opacity-100">
                               <p className="text-xs font-bold uppercase tracking-widest mb-1 text-emerald-400">Total Payable</p>
                               <p className="text-5xl font-bold tracking-tight">Rs.{total.toFixed(2)}</p>
