@@ -37,8 +37,9 @@ jobs:
         run: npm run build
         working-directory: ./frontend
         env:
-          REACT_APP_API_URL: https://placeholder.onrender.com/api
+          REACT_APP_API_URL: https://smart-restro-backend.onrender.com/api
           DISABLE_ESLINT_PLUGIN: "true"
           CI: "false"
           GENERATE_SOURCEMAP: "false"
           SKIP_PREFLIGHT_CHECK: "true"
+          NODE_OPTIONS: "--max-old-space-size=4096"
