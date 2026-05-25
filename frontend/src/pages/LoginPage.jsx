@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { UserRole } from '../types';
-import { Loader2, CheckCircle } from 'lucide-react';
+import { Loader2, CheckCircle, Wifi } from 'lucide-react';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
 
@@ -12,7 +12,24 @@ const LoginPage = ({ onLogin }) => {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [serverWaking, setServerWaking] = useState(false);
+  const [serverReady, setServerReady] = useState(false);
 
+  // Ping backend on mount to wake it up from Render free tier sleep
+  useEffect(() => {
+    const wakeServer = async () => {
+      try {
+        setServerWaking(true);
+        await axios.get(`${API_BASE.replace('/api', '')}/test`, { timeout: 60000 });
+        setServerReady(true);
+      } catch (e) {
+        // Server may still be waking — login will handle the retry
+      } finally {
+        setServerWaking(false);
+      }
+    };
+    wakeServer();
+  }, []);
   // Forgot password state
   const [view, setView] = useState('login'); // 'login' | 'forgot' | 'reset'
   const [fpEmail, setFpEmail] = useState('');
@@ -151,9 +168,10 @@ const LoginPage = ({ onLogin }) => {
       {/* Left side - Restaurant kitchen image */}
       <div className="hidden lg:flex lg:w-1/2 relative">
         <div
-          className="w-full bg-cover bg-center bg-no-repeat"
+          className="w-full bg-center bg-no-repeat"
           style={{
-            backgroundImage: `url('https://images.stockcake.com/public/c/d/3/cd3d0ecd-3d1b-4c55-a7f3-802cbc8fcd50_large/chef-cooking-flamboyantly-stockcake.jpg')`
+            backgroundImage: `url('https://images.stockcake.com/public/c/d/3/cd3d0ecd-3d1b-4c55-a7f3-802cbc8fcd50_large/chef-cooking-flamboyantly-stockcake.jpg')`,
+            backgroundSize: '100%'
           }}
         >
           <div className="absolute inset-0 bg-black bg-opacity-30"></div>
@@ -301,6 +319,20 @@ const LoginPage = ({ onLogin }) => {
                 </div>
 
                 {error && <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>}
+
+                {serverWaking && (
+                  <div className="text-amber-600 text-sm bg-amber-50 p-3 rounded-lg border border-amber-200 flex items-center gap-2">
+                    <Loader2 size={16} className="animate-spin shrink-0" />
+                    Server is waking up, please wait a moment...
+                  </div>
+                )}
+
+                {serverReady && (
+                  <div className="text-emerald-600 text-sm bg-emerald-50 p-3 rounded-lg border border-emerald-200 flex items-center gap-2">
+                    <Wifi size={16} className="shrink-0" />
+                    Server is ready
+                  </div>
+                )}
 
                 <button type="submit"
                   className="w-full bg-emerald-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
