@@ -21,13 +21,15 @@ const LoginPage = ({ onLogin }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetSuccess, setResetSuccess] = useState(false);
 
-  // Check for reset token in URL
+  // Check for reset token in URL — works on both /?token=... and /reset-password?token=...
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     if (token) {
       setResetToken(token);
       setView('reset');
+      // Clean the token from URL bar without reloading
+      window.history.replaceState({}, '', '/');
     }
   }, []);
 
