@@ -2,9 +2,9 @@
   "compilerOptions": {
     "baseUrl": "src",
     "checkJs": false,
-    "forceConsistentCasingInFileNames": false,
+    "forceConsistentCasingInFileNames": true,
     "jsx": "react-jsx",
-    "module": "commonjs",
+    "module": "esnext",
     "moduleResolution": "node",
     "noEmit": true,
     "paths": {
