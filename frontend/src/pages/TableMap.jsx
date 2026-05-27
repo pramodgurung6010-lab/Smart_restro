@@ -19,8 +19,16 @@ const TableMap = ({ onSelectTable }) => {
       const res = await api.get('/tables');
       const backendTables = res.data;
       if (backendTables && backendTables.length > 0) {
-        // Map backend fields to frontend shape
-        setTables(backendTables.map(t => ({
+        // Sort: parent tables first, then sub-tables right after their parent
+        const parents = backendTables.filter(t => !t.parentId);
+        const children = backendTables.filter(t => t.parentId);
+        const sorted = [];
+        parents.forEach(p => {
+          sorted.push(p);
+          children.filter(c => c.parentId === p.tableId).forEach(c => sorted.push(c));
+        });
+
+        setTables(sorted.map(t => ({
           id: t.tableId,
           number: t.number,
           capacity: t.capacity,
@@ -253,7 +261,8 @@ const TableMap = ({ onSelectTable }) => {
     setTables(prev => prev.map(t => {
       if (allIds.includes(t.id)) return {
         ...t, status: TableStatus.AVAILABLE, mergedWith: undefined,
-        masterTableId: undefined, capacity: t.originalCapacity || t.capacity, originalCapacity: undefined
+        masterTableId: undefined, capacity: t.originalCapacity || t.capacity,
+        originalCapacity: undefined, isSplit: false
       };
       return t;
     }));
@@ -268,7 +277,8 @@ const TableMap = ({ onSelectTable }) => {
         capacity: t?.originalCapacity || t?.capacity,
         originalCapacity: null,
         currentOrderId: null,
-        manualStatus: false
+        manualStatus: false,
+        isSplit: false   // ← always reset split flag on unmerge
       };
     }));
   };
@@ -285,12 +295,12 @@ const TableMap = ({ onSelectTable }) => {
     setTables(prev => prev.map(t => {
       if (t.id === masterId) {
         if (updatedMergedWith.length === 0) {
-          return { ...t, mergedWith: undefined, capacity: t.originalCapacity || t.capacity, originalCapacity: undefined };
+          return { ...t, mergedWith: undefined, capacity: t.originalCapacity || t.capacity, originalCapacity: undefined, isSplit: false };
         }
-        return { ...t, mergedWith: updatedMergedWith, capacity: newMasterCapacity };
+        return { ...t, mergedWith: updatedMergedWith, capacity: newMasterCapacity, isSplit: false };
       }
       if (t.id === tableIdToUnmerge) {
-        return { ...t, status: TableStatus.AVAILABLE, masterTableId: undefined, capacity: t.originalCapacity || t.capacity, originalCapacity: undefined };
+        return { ...t, status: TableStatus.AVAILABLE, masterTableId: undefined, capacity: t.originalCapacity || t.capacity, originalCapacity: undefined, isSplit: false };
       }
       return t;
     }));
@@ -301,14 +311,16 @@ const TableMap = ({ onSelectTable }) => {
         tableId: masterId,
         mergedWith: updatedMergedWith,
         capacity: updatedMergedWith.length === 0 ? (master.originalCapacity || master.capacity) : newMasterCapacity,
-        originalCapacity: updatedMergedWith.length === 0 ? null : (master.originalCapacity || master.capacity)
+        originalCapacity: updatedMergedWith.length === 0 ? null : (master.originalCapacity || master.capacity),
+        isSplit: false   // ← reset split flag on unmerge
       },
       {
         tableId: tableIdToUnmerge,
         status: TableStatus.AVAILABLE,
         masterTableId: null,
         capacity: tableToUnmerge?.originalCapacity || tableToUnmerge?.capacity,
-        originalCapacity: null
+        originalCapacity: null,
+        isSplit: false   // ← reset split flag on unmerge
       }
     ]);
   };
@@ -341,14 +353,17 @@ const TableMap = ({ onSelectTable }) => {
       }
     }
 
-    // Update local state
-    setTables(prev => [
-      ...prev.map(t => t.id === tableId ? {
+    // Insert sub-tables RIGHT AFTER the parent in the array (preserves grid position)
+    setTables(prev => {
+      const parentIndex = prev.findIndex(t => t.id === tableId);
+      const updated = prev.map(t => t.id === tableId ? {
         ...t, isSplit: true, status: TableStatus.OCCUPIED,
         originalCapacity: t.capacity, currentOrderId: undefined
-      } : t),
-      ...subTables
-    ]);
+      } : t);
+      // Insert sub-tables right after parent index
+      updated.splice(parentIndex + 1, 0, ...subTables);
+      return updated;
+    });
 
     // Sync parent + sub-tables to backend
     await bulkSync([
@@ -372,26 +387,51 @@ const TableMap = ({ onSelectTable }) => {
   };
 
   const handleUnsplit = async (parentId) => {
-    const subTableIds = tables.filter(t => t.parentId === parentId).map(t => t.id);
+    const subTables = tables.filter(t => t.parentId === parentId);
+    const subTableIds = subTables.map(t => t.id);
     const parent = tables.find(t => t.id === parentId);
 
-    // Update local state
+    // Collect any active order from sub-tables to restore to parent
+    const activeSubTable = subTables.find(t => t.currentOrderId);
+    const restoredOrderId = activeSubTable?.currentOrderId || null;
+
+    // If there's an active order on a sub-table, reassign it back to the parent
+    if (restoredOrderId) {
+      try {
+        await api.put(`/orders/${restoredOrderId}`, {
+          tableId: parentId,
+          tableNumber: parent?.number
+        });
+      } catch (error) {
+        console.error('Error reassigning order back to parent:', error);
+      }
+    }
+
+    const restoredStatus = restoredOrderId ? TableStatus.OCCUPIED : TableStatus.AVAILABLE;
+
+    // 1. Reset parent in DB FIRST (before deleting sub-tables)
+    await syncStatus(parentId, {
+      isSplit: false,
+      status: restoredStatus,
+      capacity: parent?.originalCapacity || parent?.capacity,
+      originalCapacity: null,
+      currentOrderId: restoredOrderId
+    });
+
+    // 2. Then delete sub-tables from DB
+    await Promise.all(subTableIds.map(id => api.delete(`/tables/${id}`).catch(() => {})));
+
+    // 3. Update local state last
     setTables(prev => {
       const filtered = prev.filter(t => t.parentId !== parentId);
       return filtered.map(t => t.id === parentId ? {
-        ...t, isSplit: false, status: TableStatus.AVAILABLE,
-        capacity: t.originalCapacity || t.capacity, originalCapacity: undefined
+        ...t,
+        isSplit: false,
+        status: restoredStatus,
+        capacity: t.originalCapacity || t.capacity,
+        originalCapacity: undefined,
+        currentOrderId: restoredOrderId || undefined
       } : t);
-    });
-
-    // Delete sub-tables from backend and restore parent
-    await Promise.all(subTableIds.map(id => api.delete(`/tables/${id}`).catch(() => {})));
-    await syncStatus(parentId, {
-      isSplit: false,
-      status: TableStatus.AVAILABLE,
-      capacity: parent?.originalCapacity || parent?.capacity,
-      originalCapacity: null,
-      currentOrderId: null
     });
   };
 

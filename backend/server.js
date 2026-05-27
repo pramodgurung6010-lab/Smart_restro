@@ -80,7 +80,7 @@ mongoose
     }
 
     // Seed initial tables if none exist
-    const tableCount = await Table.countDocuments();
+    const tableCount = await Table.countDocuments({ parentId: null });
     if (tableCount === 0) {
       const initialTables = [
         { tableId: 't1',  number: '01', capacity: 2 },
@@ -104,6 +104,22 @@ mongoose
     } else {
       console.log(`ℹ️  Tables already exist (${tableCount})`);
     }
+
+    // Self-heal: fix any orphaned MERGED tables whose master no longer references them
+    const mergedTables = await Table.find({ status: 'MERGED' });
+    let healed = 0;
+    for (const t of mergedTables) {
+      const master = t.masterTableId ? await Table.findOne({ tableId: t.masterTableId }) : null;
+      const isOrphaned = !master || !master.mergedWith?.includes(t.tableId);
+      if (isOrphaned) {
+        await Table.updateOne({ tableId: t.tableId }, {
+          status: 'AVAILABLE', masterTableId: null, mergedWith: [],
+          isSplit: false, originalCapacity: null, currentOrderId: null
+        });
+        healed++;
+      }
+    }
+    if (healed > 0) console.log(`🔧 Self-healed ${healed} orphaned MERGED table(s)`);
   })
   .catch((err) => console.log(err));
 

@@ -13,17 +13,14 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// PATCH /api/tables/:tableId/status — update a single table's status
+// PATCH /api/tables/:tableId/status — update a single table's fields
 router.patch('/:tableId/status', authenticateToken, async (req, res) => {
   try {
-    const { status, currentOrderId, manualStatus } = req.body;
+    const { tableId, ...fields } = req.body;
+    // Accept any field sent in the body
     const table = await Table.findOneAndUpdate(
       { tableId: req.params.tableId },
-      {
-        status,
-        ...(currentOrderId !== undefined && { currentOrderId }),
-        ...(manualStatus !== undefined && { manualStatus })
-      },
+      { ...fields },
       { new: true }
     );
     if (!table) return res.status(404).json({ message: 'Table not found' });
