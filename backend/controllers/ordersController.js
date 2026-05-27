@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const Menu = require('../models/Menu');
 const User = require('../models/User');
+const Table = require('../models/Table');
 
 // Helper: populate orders manually
 const populateOrder = async (order) => {
@@ -95,6 +96,17 @@ const create = async (req, res) => {
       waiter: req.user._id, waiterName: req.user.name || req.user.username, status: 'PENDING'
     });
     await newOrder.save();
+
+// After order is created, update table status to OCCUPIED in Table collection
+    try {
+      await Table.findOneAndUpdate(
+        { tableId: newOrder.tableId },
+        { status: 'OCCUPIED', currentOrderId: newOrder._id.toString(), manualStatus: false },
+        { upsert: false }
+      );
+    } catch (tableErr) {
+      console.error('Table status sync error (non-fatal):', tableErr.message);
+    }
 
     const populatedOrder = await Order.findById(newOrder._id)
       .populate('waiter', 'name username')
@@ -324,6 +336,17 @@ const processPayment = async (req, res) => {
     order.isPaid = true;
     order.status = 'SERVED';
     await order.save();
+
+    // Release table back to AVAILABLE
+    try {
+      await Table.findOneAndUpdate(
+        { tableId: order.tableId },
+        { status: 'AVAILABLE', currentOrderId: null, manualStatus: false },
+        { upsert: false }
+      );
+    } catch (tableErr) {
+      console.error('Table status sync error (non-fatal):', tableErr.message);
+    }
 
     const updatedOrder = await Order.findById(id).populate('waiter', 'name username').populate('items.menuItem', 'name category');
     res.status(200).json({ message: 'Payment processed successfully', order: updatedOrder, change: amountPaid - order.total });

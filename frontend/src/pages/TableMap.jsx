@@ -1,35 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { TableStatus } from '../types';
 import { INITIAL_TABLES } from '../constants';
 import { Users, GitMerge, Columns, X, Check, Move, Undo2, Plus, ChevronDown, ArrowRight } from 'lucide-react';
 
 const TableMap = ({ onSelectTable }) => {
-  const [tables, setTables] = useState(() => {
-    try {
-      const saved = localStorage.getItem('tableMapState');
-      if (saved) {
-        const savedTables = JSON.parse(saved);
-        // Also find any split sub-tables (they have parentId and aren't in INITIAL_TABLES)
-        const subTables = savedTables.filter(s => s.parentId && !INITIAL_TABLES.find(t => t.id === s.id));
-        // Restore INITIAL_TABLES with saved state
-        const restored = INITIAL_TABLES.map(initial => {
-          const s = savedTables.find(x => x.id === initial.id);
-          if (s) {
-            // If isSplit is true but no sub-tables exist in saved state, clear it
-            const hasSubs = subTables.some(sub => sub.parentId === initial.id);
-            if (s.isSplit && !hasSubs) {
-              return { ...initial, ...s, isSplit: false, status: TableStatus.AVAILABLE };
-            }
-            return { ...initial, ...s };
-          }
-          return initial;
-        });
-        return [...restored, ...subTables];
-      }
-    } catch (e) {}
-    return INITIAL_TABLES;
-  });
+  const [tables, setTables] = useState(INITIAL_TABLES);
   const [mergeMode, setMergeMode] = useState(false);
   const [reassignMode, setReassignMode] = useState(null);
   const [selectedForMerge, setSelectedForMerge] = useState([]);
@@ -37,78 +13,56 @@ const TableMap = ({ onSelectTable }) => {
   const [showStatusMenu, setShowStatusMenu] = useState(null);
   const [showUnmergeModal, setShowUnmergeModal] = useState(null);
 
-  // API configuration — use interceptor so token is always fresh per request
-  // (imported from services/api.js)
-
-  // Save merge/split state to localStorage whenever tables change
-  useEffect(() => {
-    const stateToSave = tables.map(t => ({
-      id: t.id,
-      number: t.number,
-      capacity: t.capacity,
-      status: t.status === TableStatus.MERGED ? TableStatus.MERGED : t.status,
-      mergedWith: t.mergedWith,
-      masterTableId: t.masterTableId,
-      originalCapacity: t.originalCapacity,
-      isSplit: t.isSplit,
-      parentId: t.parentId,
-      manualStatus: t.manualStatus,
-    }));
-    localStorage.setItem('tableMapState', JSON.stringify(stateToSave));
-  }, [tables]);
-
-  // Self-heal: fix any tables that have isSplit=true but no sub-tables exist
-  useEffect(() => {
-    setTables(prev => {
-      const needsFix = prev.some(t => t.isSplit && !prev.some(x => x.parentId === t.id));
-      if (!needsFix) return prev;
-      return prev.map(t => {
-        if (t.isSplit && !prev.some(x => x.parentId === t.id)) {
-          return { ...t, isSplit: false, status: TableStatus.AVAILABLE, capacity: t.originalCapacity || t.capacity, originalCapacity: undefined };
-        }
-        return t;
-      });
-    });
-  }, []);
-
-  // Fetch orders to update table statuses - preserve merge/split state
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const response = await api.get('/orders');
-        const backendOrders = response.data.orders || [];
-        
-        // Update table statuses based on active orders - preserve merge/split state
-        setTables(prev => prev.map(table => {
-          if (table.status === TableStatus.MERGED) return table;
-          // Never override manually set status (RESERVED or manually OCCUPIED)
-          if (table.manualStatus) return table;
-          
-          const activeOrder = backendOrders.find(order => 
-            order.tableId === table.id && 
-            !['CANCELLED', 'PAID'].includes(order.status) &&
-            !order.isPaid
-          );
-          
-          if (activeOrder) {
-            return { ...table, status: TableStatus.OCCUPIED, currentOrderId: activeOrder._id };
-          }
-          
-          if (table.status === TableStatus.OCCUPIED && !table.isSplit && table.currentOrderId) {
-            return { ...table, status: TableStatus.AVAILABLE, currentOrderId: undefined };
-          }
-          return table;
-        }));
-      } catch (error) {
-        console.error('Error fetching orders:', error);
+  // ─── Fetch tables from backend ───────────────────────────────────────────
+  const fetchTables = useCallback(async () => {
+    try {
+      const res = await api.get('/tables');
+      const backendTables = res.data;
+      if (backendTables && backendTables.length > 0) {
+        // Map backend fields to frontend shape
+        setTables(backendTables.map(t => ({
+          id: t.tableId,
+          number: t.number,
+          capacity: t.capacity,
+          originalCapacity: t.originalCapacity,
+          status: t.status,
+          manualStatus: t.manualStatus,
+          currentOrderId: t.currentOrderId,
+          mergedWith: t.mergedWith?.length ? t.mergedWith : undefined,
+          masterTableId: t.masterTableId || undefined,
+          isSplit: t.isSplit,
+          parentId: t.parentId || undefined,
+        })));
       }
-    };
-
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 5000);
-    return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    } catch (err) {
+      console.error('Error fetching tables:', err);
+    }
   }, []);
+
+  // Poll every 5 seconds for real-time updates across all staff
+  useEffect(() => {
+    fetchTables();
+    const interval = setInterval(fetchTables, 5000);
+    return () => clearInterval(interval);
+  }, [fetchTables]);
+
+  // ─── Sync a single table status to backend ───────────────────────────────
+  const syncStatus = async (tableId, fields) => {
+    try {
+      await api.patch(`/tables/${tableId}/status`, fields);
+    } catch (err) {
+      console.error('Error syncing table status:', err);
+    }
+  };
+
+  // ─── Bulk sync multiple tables to backend ────────────────────────────────
+  const bulkSync = async (updates) => {
+    try {
+      await api.post('/tables/bulk-update', { updates });
+    } catch (err) {
+      console.error('Error bulk syncing tables:', err);
+    }
+  };
 
   const movingTable = reassignMode ? tables.find(t => t.id === reassignMode) : null;
 
@@ -172,27 +126,17 @@ const TableMap = ({ onSelectTable }) => {
     }
   };
 
-  const handleUpdateStatus = (tableId, status) => {
-    setTables(prev => {
-      const updated = prev.map(t => {
-        if (t.id === tableId) {
-          if (status === TableStatus.AVAILABLE) {
-            return { ...t, status, currentOrderId: undefined, manualStatus: false };
-          }
-          return { ...t, status, manualStatus: true };
-        }
-        return t;
-      });
-      const stateToSave = updated.map(t => ({
-        id: t.id, number: t.number, capacity: t.capacity,
-        status: t.status === TableStatus.MERGED ? TableStatus.MERGED : t.status,
-        mergedWith: t.mergedWith, masterTableId: t.masterTableId,
-        originalCapacity: t.originalCapacity, isSplit: t.isSplit, parentId: t.parentId,
-        manualStatus: t.manualStatus,
-      }));
-      localStorage.setItem('tableMapState', JSON.stringify(stateToSave));
-      return updated;
-    });
+  const handleUpdateStatus = async (tableId, status) => {
+    const fields = {
+      status,
+      manualStatus: status !== TableStatus.AVAILABLE,
+      ...(status === TableStatus.AVAILABLE && { currentOrderId: null })
+    };
+    // Optimistic update
+    setTables(prev => prev.map(t =>
+      t.id === tableId ? { ...t, ...fields } : t
+    ));
+    await syncStatus(tableId, fields);
   };
 
   const handleReassign = async (fromTableId, toTableId) => {
@@ -201,7 +145,6 @@ const TableMap = ({ onSelectTable }) => {
 
     try {
       const toTable = tables.find(t => t.id === toTableId);
-      // Update order's table in backend — include tableNumber (required field)
       await api.put(`/orders/${fromTable.currentOrderId}`, {
         tableId: toTableId,
         tableNumber: toTable?.number || toTableId
@@ -209,14 +152,16 @@ const TableMap = ({ onSelectTable }) => {
 
       // Update local state
       setTables(prev => prev.map(t => {
-        if (t.id === fromTableId) {
-          return { ...t, status: TableStatus.AVAILABLE, currentOrderId: undefined };
-        }
-        if (t.id === toTableId) {
-          return { ...t, status: TableStatus.OCCUPIED, currentOrderId: fromTable.currentOrderId };
-        }
+        if (t.id === fromTableId) return { ...t, status: TableStatus.AVAILABLE, currentOrderId: undefined };
+        if (t.id === toTableId) return { ...t, status: TableStatus.OCCUPIED, currentOrderId: fromTable.currentOrderId };
         return t;
       }));
+
+      // Sync both tables to backend
+      await bulkSync([
+        { tableId: fromTableId, status: TableStatus.AVAILABLE, currentOrderId: null, manualStatus: false },
+        { tableId: toTableId, status: TableStatus.OCCUPIED, currentOrderId: fromTable.currentOrderId, manualStatus: false }
+      ]);
     } catch (error) {
       console.error('Error reassigning table:', error);
       alert('Failed to reassign table');
@@ -227,11 +172,9 @@ const TableMap = ({ onSelectTable }) => {
     if (selectedForMerge.length < 2) return;
     const [master, ...others] = selectedForMerge;
 
-    // Get table info for master and slaves
     const masterTable = tables.find(t => t.id === master);
     const otherTables = tables.filter(t => others.includes(t.id));
 
-    // Merge orders in backend if any tables have active orders
     const hasOrders = masterTable?.currentOrderId || otherTables.some(t => t.currentOrderId);
     if (hasOrders) {
       try {
@@ -250,85 +193,124 @@ const TableMap = ({ onSelectTable }) => {
     setSelectedForMerge([]);
   };
 
-  const handleMerge = (masterId, otherIds) => {
+  const handleMerge = async (masterId, otherIds) => {
     setTables(prev => {
       const masterTable = prev.find(t => t.id === masterId);
       const otherTables = prev.filter(t => otherIds.includes(t.id));
       if (!masterTable) return prev;
       const totalCapacity = masterTable.capacity + otherTables.reduce((sum, t) => sum + t.capacity, 0);
-      // Master keeps its order, or inherits from first slave that has one
       const inheritedOrderId = masterTable.currentOrderId ||
         otherTables.find(t => t.currentOrderId)?.currentOrderId;
       return prev.map(t => {
         if (t.id === masterId) return {
-          ...t,
-          mergedWith: otherIds,
-          capacity: totalCapacity,
+          ...t, mergedWith: otherIds, capacity: totalCapacity,
           originalCapacity: t.originalCapacity || t.capacity,
           status: inheritedOrderId ? TableStatus.OCCUPIED : t.status,
           currentOrderId: inheritedOrderId
         };
         if (otherIds.includes(t.id)) return {
-          ...t,
-          status: TableStatus.MERGED,
-          masterTableId: masterId,
-          originalCapacity: t.originalCapacity || t.capacity,
-          currentOrderId: undefined
+          ...t, status: TableStatus.MERGED, masterTableId: masterId,
+          originalCapacity: t.originalCapacity || t.capacity, currentOrderId: undefined
         };
         return t;
       });
     });
+
+    // Sync to backend
+    const masterTable = tables.find(t => t.id === masterId);
+    const otherTables = tables.filter(t => otherIds.includes(t.id));
+    const totalCapacity = (masterTable?.capacity || 0) + otherTables.reduce((sum, t) => sum + t.capacity, 0);
+    const inheritedOrderId = masterTable?.currentOrderId || otherTables.find(t => t.currentOrderId)?.currentOrderId;
+
+    await bulkSync([
+      {
+        tableId: masterId,
+        mergedWith: otherIds,
+        capacity: totalCapacity,
+        originalCapacity: masterTable?.originalCapacity || masterTable?.capacity,
+        status: inheritedOrderId ? TableStatus.OCCUPIED : (masterTable?.status || TableStatus.AVAILABLE),
+        currentOrderId: inheritedOrderId || null,
+        isMerged: false
+      },
+      ...otherIds.map(id => {
+        const t = tables.find(x => x.id === id);
+        return {
+          tableId: id,
+          status: TableStatus.MERGED,
+          masterTableId: masterId,
+          originalCapacity: t?.originalCapacity || t?.capacity,
+          currentOrderId: null
+        };
+      })
+    ]);
   };
 
-  const handleUnmerge = (masterId) => {
+  const handleUnmerge = async (masterId) => {
     const master = tables.find(t => t.id === masterId);
     if (!master || !master.mergedWith) return;
     const allIds = [masterId, ...master.mergedWith];
+
     setTables(prev => prev.map(t => {
-      if (allIds.includes(t.id)) return { ...t, status: TableStatus.AVAILABLE, mergedWith: undefined, masterTableId: undefined, capacity: t.originalCapacity || t.capacity, originalCapacity: undefined };
+      if (allIds.includes(t.id)) return {
+        ...t, status: TableStatus.AVAILABLE, mergedWith: undefined,
+        masterTableId: undefined, capacity: t.originalCapacity || t.capacity, originalCapacity: undefined
+      };
       return t;
+    }));
+
+    await bulkSync(allIds.map(id => {
+      const t = tables.find(x => x.id === id);
+      return {
+        tableId: id,
+        status: TableStatus.AVAILABLE,
+        mergedWith: [],
+        masterTableId: null,
+        capacity: t?.originalCapacity || t?.capacity,
+        originalCapacity: null,
+        currentOrderId: null,
+        manualStatus: false
+      };
     }));
   };
 
-  const handleSelectiveUnmerge = (masterId, tableIdToUnmerge) => {
-    setTables(prev => {
-      const master = prev.find(t => t.id === masterId);
-      if (!master || !master.mergedWith) return prev;
-      
-      const updatedMergedWith = master.mergedWith.filter(id => id !== tableIdToUnmerge);
-      
-      return prev.map(t => {
-        if (t.id === masterId) {
-          const tableToUnmerge = prev.find(table => table.id === tableIdToUnmerge);
-          const newCapacity = t.capacity - (tableToUnmerge?.originalCapacity || tableToUnmerge?.capacity || 0);
-          
-          if (updatedMergedWith.length === 0) {
-            return { 
-              ...t, 
-              mergedWith: undefined, 
-              capacity: t.originalCapacity || t.capacity, 
-              originalCapacity: undefined 
-            };
-          } else {
-            return { 
-              ...t, 
-              mergedWith: updatedMergedWith, 
-              capacity: newCapacity 
-            };
-          }
+  const handleSelectiveUnmerge = async (masterId, tableIdToUnmerge) => {
+    const master = tables.find(t => t.id === masterId);
+    if (!master || !master.mergedWith) return;
+
+    const updatedMergedWith = master.mergedWith.filter(id => id !== tableIdToUnmerge);
+    const tableToUnmerge = tables.find(t => t.id === tableIdToUnmerge);
+    const removedCapacity = tableToUnmerge?.originalCapacity || tableToUnmerge?.capacity || 0;
+    const newMasterCapacity = master.capacity - removedCapacity;
+
+    setTables(prev => prev.map(t => {
+      if (t.id === masterId) {
+        if (updatedMergedWith.length === 0) {
+          return { ...t, mergedWith: undefined, capacity: t.originalCapacity || t.capacity, originalCapacity: undefined };
         }
-        if (t.id === tableIdToUnmerge) {
-          return { 
-            ...t, 
-            status: TableStatus.AVAILABLE, 
-            masterTableId: undefined, 
-            capacity: t.originalCapacity || t.capacity, 
-            originalCapacity: undefined 
-          };
-        }
-        return t;
-      });
-    });
+        return { ...t, mergedWith: updatedMergedWith, capacity: newMasterCapacity };
+      }
+      if (t.id === tableIdToUnmerge) {
+        return { ...t, status: TableStatus.AVAILABLE, masterTableId: undefined, capacity: t.originalCapacity || t.capacity, originalCapacity: undefined };
+      }
+      return t;
+    }));
+
+    // Sync to backend
+    await bulkSync([
+      {
+        tableId: masterId,
+        mergedWith: updatedMergedWith,
+        capacity: updatedMergedWith.length === 0 ? (master.originalCapacity || master.capacity) : newMasterCapacity,
+        originalCapacity: updatedMergedWith.length === 0 ? null : (master.originalCapacity || master.capacity)
+      },
+      {
+        tableId: tableIdToUnmerge,
+        status: TableStatus.AVAILABLE,
+        masterTableId: null,
+        capacity: tableToUnmerge?.originalCapacity || tableToUnmerge?.capacity,
+        originalCapacity: null
+      }
+    ]);
   };
 
   const handleSplit = async (tableId, parts) => {
@@ -342,13 +324,12 @@ const TableMap = ({ onSelectTable }) => {
       id: `split-${tableId}-${i}`,
       number: `${table.number}.${i + 1}`,
       capacity: baseCapacity + (i < remainder ? 1 : 0),
-      // First sub-table inherits the existing order if parent was occupied
       status: i === 0 && table.currentOrderId ? TableStatus.OCCUPIED : TableStatus.AVAILABLE,
       currentOrderId: i === 0 && table.currentOrderId ? table.currentOrderId : undefined,
       parentId: tableId
     }));
 
-    // If parent had an active order, reassign it to sub-table 12.1 / 13.1 in backend
+    // Reassign order to first sub-table in backend
     if (table.currentOrderId) {
       try {
         await api.put(`/orders/${table.currentOrderId}`, {
@@ -360,28 +341,57 @@ const TableMap = ({ onSelectTable }) => {
       }
     }
 
+    // Update local state
     setTables(prev => [
       ...prev.map(t => t.id === tableId ? {
-        ...t,
-        isSplit: true,
-        status: TableStatus.OCCUPIED,
-        originalCapacity: t.capacity,
-        currentOrderId: undefined // parent no longer holds the order
+        ...t, isSplit: true, status: TableStatus.OCCUPIED,
+        originalCapacity: t.capacity, currentOrderId: undefined
       } : t),
       ...subTables
     ]);
+
+    // Sync parent + sub-tables to backend
+    await bulkSync([
+      {
+        tableId,
+        isSplit: true,
+        status: TableStatus.OCCUPIED,
+        originalCapacity: table.capacity,
+        currentOrderId: null
+      },
+      ...subTables.map(st => ({
+        tableId: st.id,
+        number: st.number,
+        capacity: st.capacity,
+        status: st.status,
+        currentOrderId: st.currentOrderId || null,
+        parentId: tableId,
+        isSplit: false
+      }))
+    ]);
   };
 
-  const handleUnsplit = (parentId) => {
+  const handleUnsplit = async (parentId) => {
+    const subTableIds = tables.filter(t => t.parentId === parentId).map(t => t.id);
+    const parent = tables.find(t => t.id === parentId);
+
+    // Update local state
     setTables(prev => {
       const filtered = prev.filter(t => t.parentId !== parentId);
-      return filtered.map(t => t.id === parentId ? { 
-        ...t, 
-        isSplit: false, 
-        status: TableStatus.AVAILABLE,
-        capacity: t.originalCapacity || t.capacity,
-        originalCapacity: undefined
+      return filtered.map(t => t.id === parentId ? {
+        ...t, isSplit: false, status: TableStatus.AVAILABLE,
+        capacity: t.originalCapacity || t.capacity, originalCapacity: undefined
       } : t);
+    });
+
+    // Delete sub-tables from backend and restore parent
+    await Promise.all(subTableIds.map(id => api.delete(`/tables/${id}`).catch(() => {})));
+    await syncStatus(parentId, {
+      isSplit: false,
+      status: TableStatus.AVAILABLE,
+      capacity: parent?.originalCapacity || parent?.capacity,
+      originalCapacity: null,
+      currentOrderId: null
     });
   };
 

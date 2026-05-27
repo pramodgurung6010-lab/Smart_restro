@@ -30,6 +30,8 @@ const User = require('./models/User');
 const authRoutes = require('./routes/auth-main');
 const menuRoutes = require('./routes/menu');
 const orderRoutes = require('./routes/orders');
+const tableRoutes = require('./routes/tables');
+const Table = require('./models/Table');
 
 // Test route
 app.get('/test', (req, res) => {
@@ -50,6 +52,9 @@ app.use('/api/menu', menuRoutes);
 
 // Use order routes
 app.use('/api/orders', orderRoutes);
+
+// Use table routes
+app.use('/api/tables', tableRoutes);
 
 // Connect to MongoDB
 mongoose
@@ -72,6 +77,32 @@ mongoose
       console.log('✅ Default admin user created (admin100)');
     } else {
       console.log('ℹ️  Admin user already exists');
+    }
+
+    // Seed initial tables if none exist
+    const tableCount = await Table.countDocuments();
+    if (tableCount === 0) {
+      const initialTables = [
+        { tableId: 't1',  number: '01', capacity: 2 },
+        { tableId: 't2',  number: '02', capacity: 2 },
+        { tableId: 't3',  number: '03', capacity: 2 },
+        { tableId: 't4',  number: '04', capacity: 2 },
+        { tableId: 't5',  number: '05', capacity: 2 },
+        { tableId: 't6',  number: '06', capacity: 4 },
+        { tableId: 't7',  number: '07', capacity: 4 },
+        { tableId: 't8',  number: '08', capacity: 4 },
+        { tableId: 't9',  number: '09', capacity: 4 },
+        { tableId: 't10', number: '10', capacity: 4 },
+        { tableId: 't11', number: '11', capacity: 8 },
+        { tableId: 't12', number: '12', capacity: 8 },
+        { tableId: 't13', number: '13', capacity: 10 },
+        { tableId: 't14', number: '14', capacity: 4 },
+        { tableId: 't15', number: '15', capacity: 4 },
+      ];
+      await Table.insertMany(initialTables);
+      console.log('✅ Initial tables seeded (15 tables)');
+    } else {
+      console.log(`ℹ️  Tables already exist (${tableCount})`);
     }
   })
   .catch((err) => console.log(err));
