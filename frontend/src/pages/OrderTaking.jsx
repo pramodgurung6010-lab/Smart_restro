@@ -73,7 +73,6 @@ const OrderTaking = ({ table, onSubmitOrder, onCancel }) => {
   );
 
   const addToCart = (item) => {
-    // Each click adds a separate row (quantity 1) so kitchen can track individually
     setCart(prev => [...prev, {
       id: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       menuItemId: item.id,

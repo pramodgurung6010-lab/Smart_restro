@@ -60,7 +60,8 @@ const AdminDashboard = () => {
         totalTables
       });
       
-      setOrders(allOrders.slice(-5).reverse());
+      // Backend returns newest first (createdAt: -1), so first 5 are most recent
+      setOrders(allOrders.slice(0, 5));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -147,9 +148,21 @@ const AdminDashboard = () => {
         {orders.length > 0 ? (
           <div className="space-y-2">
             {orders.map((order) => (
-              <div key={order._id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                <span>Order #{order.orderId}</span>
-                <span>Rs.{order.total?.toFixed(2) || '0.00'}</span>
+              <div key={order._id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <span className="font-medium text-gray-800">Order #{order.orderId}</span>
+                  <span className="ml-3 text-xs text-gray-400">Table {order.tableNumber}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${
+                    order.status === 'PENDING' ? 'bg-orange-100 text-orange-600' :
+                    order.status === 'PREPARING' ? 'bg-blue-100 text-blue-600' :
+                    order.status === 'READY' ? 'bg-emerald-100 text-emerald-600' :
+                    order.status === 'SERVED' ? 'bg-gray-100 text-gray-500' :
+                    'bg-red-100 text-red-500'
+                  }`}>{order.status}</span>
+                  <span className="font-bold text-gray-900">Rs.{order.total?.toFixed(2) || '0.00'}</span>
+                </div>
               </div>
             ))}
           </div>
